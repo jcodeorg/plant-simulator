@@ -3,9 +3,9 @@
 # 植物栽培シミュレータ集
 
 ## シミュレータ一覧
-- [水稲シミュレータ](../simulators/rice/)
-- [小麦シミュレータ](../simulators/wheat/)
-- [トマトシミュレータ](../simulators/tomato/)
+- [水稲シミュレータ](./simulators/rice/)
+- [小麦シミュレータ](./simulators/wheat/)
+- [トマトシミュレータ](./simulators/tomato/)
 
 
 ```
