@@ -1,4 +1,14 @@
-# plant-simulator
+---
+layout: default
+title: Rice Simulator Documentation
+---
+
+# 植物栽培シミュレータ集 plant-simulator
+
+## シミュレータ一覧
+- [水稲シミュレータ](./simulators/rice/)
+- [小麦シミュレータ](./simulators/wheat/)
+- [トマトシミュレータ](./simulators/tomato/)
 
 ```
 plant-simulator/
