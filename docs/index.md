@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Rice Simulator Documentation
+title: Plant Simulator Documents
 ---
 
 # 植物栽培シミュレータ集
