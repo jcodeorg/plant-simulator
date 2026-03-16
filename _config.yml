@@ -1,5 +1,5 @@
 # _config.yml
-title: Plant Simulator Documents
+title: Plant Simulator
 theme: minima # GitHub Pages 標準のテーマ。他にも jekyll-theme-architect などが選べます
 
 # docs フォルダ内を Jekyll の処理対象に含める
