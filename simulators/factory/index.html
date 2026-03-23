@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Farm Simulator - Multi-Plant Showcase</title>
+    <title>Smart Farm Simulator - Customizable Logic</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -25,7 +25,7 @@
         .block-if {
             background-color: #fb923c;
             border: 2px solid #ea580c;
-            min-width: 200px;
+            min-width: 280px;
         }
         .block-action {
             padding: 8px 12px;
@@ -34,6 +34,19 @@
             border-bottom: 3px solid rgba(0,0,0,0.2);
         }
         .block-nutrient { background-color: #22c55e; }
+
+        /* 入力要素のスタイル */
+        .block-input {
+            background: white;
+            color: #334155;
+            border-radius: 4px;
+            border: none;
+            padding: 2px 4px;
+            font-weight: bold;
+            outline: none;
+        }
+        select.block-input { cursor: pointer; }
+        input[type="number"].block-input { width: 50px; }
 
         .slot {
             min-height: 32px;
@@ -175,20 +188,28 @@
                 </div>
 
                 <div class="grid grid-cols-12 gap-4">
-                    <div class="col-span-4 bg-slate-50 p-4 rounded-xl border border-slate-200 block-container">
+                    <div class="col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200 block-container">
                         <p class="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Blocks</p>
                         
-                        <div class="block block-if text-white rounded shadow-sm overflow-hidden mb-4" draggable="true" data-type="if_else_light">
-                            <div class="p-2 font-bold bg-orange-500">もし 光 < 100 なら</div>
+                        <!-- カスタム条件ブロック -->
+                        <div class="block block-if text-white rounded shadow-sm overflow-hidden mb-4" draggable="true" data-type="custom_if_else">
+                            <div class="p-2 font-bold bg-orange-500 flex items-center gap-1 flex-wrap">
+                                <span>もし</span>
+                                <select class="block-input sensor-select">
+                                    <option value="light">光量</option>
+                                    <option value="temp">気温</option>
+                                    <option value="ec">栄養</option>
+                                </select>
+                                <select class="block-input operator-select">
+                                    <option value="lt">＜</option>
+                                    <option value="gt">＞</option>
+                                    <option value="eq">＝</option>
+                                </select>
+                                <input type="number" class="block-input value-input" value="100">
+                                <span>なら</span>
+                            </div>
                             <div class="slot" data-role="then"></div>
-                            <div class="p-2 font-bold bg-orange-500">でなければ</div>
-                            <div class="slot" data-role="else"></div>
-                        </div>
-
-                        <div class="block block-if text-white rounded shadow-sm overflow-hidden mb-4" draggable="true" data-type="if_else_ec">
-                            <div class="p-2 font-bold bg-orange-600">もし 栄養 < 1.0 なら</div>
-                            <div class="slot" data-role="then"></div>
-                            <div class="p-2 font-bold bg-orange-600">でなければ</div>
+                            <div class="p-1 font-bold bg-orange-500 text-xs px-2">でなければ</div>
                             <div class="slot" data-role="else"></div>
                         </div>
 
@@ -197,7 +218,7 @@
                         <div class="block block-action block-nutrient rounded" draggable="true" data-type="add_nutrient">肥料を投入</div>
                     </div>
 
-                    <div class="col-span-8">
+                    <div class="col-span-7">
                         <div id="workspace" class="drop-zone p-4 overflow-auto max-h-[500px]"></div>
                         <p class="text-[10px] text-slate-400 mt-2">※実行中は0.5秒ごとにこのロジックが評価されます。</p>
                     </div>
@@ -228,9 +249,21 @@
 
         // --- ドラッグ＆ドロップ ---
         let draggedElement = null;
-        document.addEventListener('dragstart', (e) => { if (e.target.classList.contains('block')) draggedElement = e.target; e.dataTransfer.setData('text/plain', ''); });
-        document.addEventListener('dragover', (e) => { const slot = e.target.closest('.slot') || e.target.closest('#workspace'); if (slot) { e.preventDefault(); slot.classList.add('slot-highlight'); } });
-        document.addEventListener('dragleave', (e) => { const slot = e.target.closest('.slot') || e.target.closest('#workspace'); if (slot) slot.classList.remove('slot-highlight'); });
+        document.addEventListener('dragstart', (e) => { 
+            if (e.target.classList.contains('block')) draggedElement = e.target; 
+            e.dataTransfer.setData('text/plain', ''); 
+        });
+        
+        document.addEventListener('dragover', (e) => { 
+            const slot = e.target.closest('.slot') || e.target.closest('#workspace'); 
+            if (slot) { e.preventDefault(); slot.classList.add('slot-highlight'); } 
+        });
+        
+        document.addEventListener('dragleave', (e) => { 
+            const slot = e.target.closest('.slot') || e.target.closest('#workspace'); 
+            if (slot) slot.classList.remove('slot-highlight'); 
+        });
+        
         document.addEventListener('drop', (e) => {
             const target = e.target.closest('.slot') || e.target.closest('#workspace');
             if (target && draggedElement) {
@@ -239,8 +272,25 @@
                 let blockToDrop;
                 if (draggedElement.closest('.block-container')) {
                     blockToDrop = draggedElement.cloneNode(true);
-                    blockToDrop.onclick = (ev) => { ev.stopPropagation(); blockToDrop.remove(); };
-                } else { blockToDrop = draggedElement; }
+                    
+                    // クローンした要素内のドロップダウンや入力値がリセットされないようにする
+                    const selects = draggedElement.querySelectorAll('select');
+                    const cloneSelects = blockToDrop.querySelectorAll('select');
+                    selects.forEach((s, i) => cloneSelects[i].value = s.value);
+                    
+                    const inputs = draggedElement.querySelectorAll('input');
+                    const cloneInputs = blockToDrop.querySelectorAll('input');
+                    inputs.forEach((inpt, i) => cloneInputs[i].value = inpt.value);
+
+                    blockToDrop.onclick = (ev) => { 
+                        // 入力欄クリック時は削除しない
+                        if (ev.target.tagName === 'SELECT' || ev.target.tagName === 'INPUT') return;
+                        ev.stopPropagation(); 
+                        blockToDrop.remove(); 
+                    };
+                } else { 
+                    blockToDrop = draggedElement; 
+                }
                 target.appendChild(blockToDrop);
             }
             draggedElement = null;
@@ -250,12 +300,27 @@
         function executeBlockList(elementList) {
             for (let block of elementList) {
                 const type = block.dataset.type;
-                if (type === 'if_else_light' || type === 'if_else_ec') {
-                    const condition = (type === 'if_else_light') ? (state.light < 100) : (state.ec < 1.0);
+                if (type === 'custom_if_else') {
+                    const sensorType = block.querySelector('.sensor-select').value;
+                    const operator = block.querySelector('.operator-select').value;
+                    const targetValue = parseFloat(block.querySelector('.value-input').value);
+                    
+                    let currentValue = 0;
+                    if (sensorType === 'light') currentValue = state.light;
+                    if (sensorType === 'temp') currentValue = state.temp;
+                    if (sensorType === 'ec') currentValue = state.ec;
+
+                    let condition = false;
+                    if (operator === 'lt') condition = currentValue < targetValue;
+                    if (operator === 'gt') condition = currentValue > targetValue;
+                    if (operator === 'eq') condition = Math.abs(currentValue - targetValue) < 0.1;
+
                     const thenSlot = block.querySelector('[data-role="then"]');
                     const elseSlot = block.querySelector('[data-role="else"]');
                     executeBlockList(condition ? thenSlot.children : elseSlot.children);
-                } else { applyAction(type); }
+                } else { 
+                    applyAction(type); 
+                }
             }
         }
 
@@ -263,7 +328,7 @@
             switch(type) {
                 case 'led_on': state.ledActive = true; break;
                 case 'led_off': state.ledActive = false; break;
-                case 'add_nutrient': state.ec = Math.min(3.0, state.ec + 0.05); break; // 連続投入を考慮し少量ずつ
+                case 'add_nutrient': state.ec = Math.min(3.0, state.ec + 0.05); break;
             }
         }
 
@@ -273,16 +338,13 @@
             const dt = (now - state.lastTick) / 1000;
             state.lastTick = now;
 
-            // 1. 環境の自然変化 (プログラムに関わらず常に発生)
-            // 気温は20-28度をゆらゆら
+            // 1. 環境の自然変化
             state.temp += (Math.random() - 0.5) * 0.05;
-            // 栄養は時間とともに減少
             state.ec = Math.max(0, state.ec - 0.002);
-            // 光量はLED状態に依存
             const ambientLight = 50 + Math.sin(now / 5000) * 20; 
             state.light = state.ledActive ? 400 : ambientLight;
 
-            // 2. プログラムの実行 (実行中の場合のみ)
+            // 2. プログラムの実行
             if (state.isProgramRunning) {
                 const rootBlocks = document.getElementById('workspace').children;
                 executeBlockList(rootBlocks);
@@ -310,7 +372,6 @@
             document.getElementById('sensor-light').innerText = Math.round(state.light);
             document.getElementById('growth-bar').style.width = `${state.growth}%`;
 
-            // LED
             const ledT = document.getElementById('led-top');
             const ledM = document.getElementById('led-mid');
             if (state.ledActive) {
@@ -321,22 +382,23 @@
                 ledM.classList.remove('led-active');
             }
 
-            // 水位と栄養の色
             const waterHeight = 10 + Math.sin(Date.now() / 1000) * 2;
             const ecColor = `rgba(56, ${Math.max(100, 255 - state.ec * 50)}, 248, 0.4)`;
             for(let i=1; i<=6; i++) {
                 const w = document.getElementById(`water-${i}`);
-                w.style.height = `${waterHeight}px`;
-                w.style.backgroundColor = ecColor;
+                if (w) {
+                    w.style.height = `${waterHeight}px`;
+                    w.style.backgroundColor = ecColor;
+                }
                 
-                // 植物のサイズ
                 const p = document.getElementById(`p${i}`);
-                const scale = 0.5 + (state.growth / 100);
-                p.style.transform = `scale(${scale})`;
-                
-                if (state.growth > 80) p.innerText = "🥬";
-                else if (state.growth > 30) p.innerText = "🌱";
-                else p.innerText = "🔹";
+                if (p) {
+                    const scale = 0.5 + (state.growth / 100);
+                    p.style.transform = `scale(${scale})`;
+                    if (state.growth > 80) p.innerText = "🥬";
+                    else if (state.growth > 30) p.innerText = "🌱";
+                    else p.innerText = "🔹";
+                }
             }
         }
 
@@ -370,7 +432,6 @@
             addLog("環境をリセットしました");
         }
 
-        // 開始
         window.onload = () => {
             addLog("システムモニタ起動完了");
             coreLoop();
