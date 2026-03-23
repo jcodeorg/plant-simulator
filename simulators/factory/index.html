@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Farm Simulator - Customizable Logic</title>
+    <title>Smart Farm Simulator - Compact Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -25,35 +25,60 @@
         .block-if {
             background-color: #fb923c;
             border: 2px solid #ea580c;
-            min-width: 280px;
+            min-width: 280px; /* 横幅をスリム化 */
         }
         .block-action {
             padding: 8px 12px;
             background-color: #3b82f6;
             color: white;
             border-bottom: 3px solid rgba(0,0,0,0.2);
+            font-family: monospace;
         }
         .block-nutrient { background-color: #22c55e; }
 
+        /* ゴミ箱ボタン */
+        .delete-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            font-size: 12px;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+        .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.8);
+        }
+        .block-container .delete-btn { display: none; }
+
         /* 入力要素のスタイル */
         .block-input {
-            background: white;
-            color: #334155;
+            background: rgba(255, 255, 255, 0.9);
+            color: #1e293b;
             border-radius: 4px;
             border: none;
             padding: 2px 4px;
             font-weight: bold;
             outline: none;
+            font-family: monospace;
         }
         select.block-input { cursor: pointer; }
-        input[type="number"].block-input { width: 50px; }
+        input[type="number"].block-input { width: 70px; }
 
         .slot {
             min-height: 32px;
-            background-color: rgba(255, 255, 255, 0.2);
-            margin: 4px 4px 4px 20px;
+            background-color: rgba(255, 255, 255, 0.15);
+            margin: 4px 4px 4px 24px;
             border-radius: 4px;
-            border: 1px dashed rgba(0,0,0,0.1);
+            border: 1px dashed rgba(255, 255, 255, 0.3);
             display: flex;
             flex-direction: column;
             gap: 2px;
@@ -112,11 +137,12 @@
         }
         .led-active {
             background: #fde047;
-            box-shadow: 0 5px 15px rgba(253, 224, 71, 0.9);
+            box-shadow: 0 5px 25px rgba(253, 224, 71, 1);
         }
 
         .log-panel { font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; }
         .slot-highlight { background-color: rgba(255, 255, 255, 0.5) !important; border: 1px solid white !important; }
+        .py-keyword { color: #f8fafc; font-family: monospace; font-weight: bold; }
     </style>
 </head>
 <body class="p-4 bg-slate-100">
@@ -133,15 +159,11 @@
                 </div>
                 
                 <div class="showcase" id="main-showcase">
-                    <!-- LED (Top) -->
                     <div id="led-top" class="led-strip" style="top: 5px;"></div>
-                    <!-- Shelf 1 -->
                     <div class="shelf"><div class="water-layer" id="water-1"></div><div class="plant-unit" id="p1">🌱</div></div>
                     <div class="shelf"><div class="water-layer" id="water-2"></div><div class="plant-unit" id="p2">🌱</div></div>
                     <div class="shelf"><div class="water-layer" id="water-3"></div><div class="plant-unit" id="p3">🌱</div></div>
-                    <!-- LED (Middle) -->
                     <div id="led-mid" class="led-strip" style="top: 50%;"></div>
-                    <!-- Shelf 2 -->
                     <div class="shelf"><div class="water-layer" id="water-4"></div><div class="plant-unit" id="p4">🌱</div></div>
                     <div class="shelf"><div class="water-layer" id="water-5"></div><div class="plant-unit" id="p5">🌱</div></div>
                     <div class="shelf"><div class="water-layer" id="water-6"></div><div class="plant-unit" id="p6">🌱</div></div>
@@ -149,19 +171,19 @@
 
                 <div class="grid grid-cols-2 gap-3 mt-4 text-sm">
                     <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                        <p class="text-[10px] text-blue-600 font-bold uppercase">気温</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase">Temperature (気温)</p>
                         <p class="text-lg font-bold text-slate-700"><span id="sensor-temp">24.0</span>°C</p>
                     </div>
                     <div class="bg-green-50 p-2 rounded-lg border border-green-100">
-                        <p class="text-[10px] text-green-600 font-bold uppercase">EC値 (栄養)</p>
-                        <p class="text-lg font-bold text-slate-700"><span id="sensor-ec">1.2</span> <small>ms/cm</small></p>
+                        <p class="text-[10px] text-green-600 font-bold uppercase">EC Value (EC値)</p>
+                        <p class="text-lg font-bold text-slate-700"><span id="sensor-ec">1.2</span> <small>mS/cm</small></p>
                     </div>
                     <div class="bg-yellow-50 p-2 rounded-lg border border-yellow-100">
-                        <p class="text-[10px] text-yellow-600 font-bold uppercase">光量</p>
-                        <p class="text-lg font-bold text-slate-700"><span id="sensor-light">150</span> <small>lux</small></p>
+                        <p class="text-[10px] text-yellow-600 font-bold uppercase">Light Intensity (光量)</p>
+                        <p class="text-lg font-bold text-slate-700"><span id="sensor-light">1200</span> <small>lx</small></p>
                     </div>
                     <div class="bg-purple-50 p-2 rounded-lg border border-purple-100">
-                        <p class="text-[10px] text-purple-600 font-bold uppercase">平均成長率</p>
+                        <p class="text-[10px] text-purple-600 font-bold uppercase">Cumulative Growth (累積生育量)</p>
                         <div class="w-full bg-purple-200 rounded-full h-2 mt-1">
                             <div id="growth-bar" class="bg-purple-600 h-2 rounded-full" style="width: 0%"></div>
                         </div>
@@ -178,7 +200,7 @@
         <div class="lg:col-span-7 space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-lg border border-slate-200 flex flex-col h-full">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-slate-800">🧩 制御ロジック</h2>
+                    <h2 class="text-xl font-bold text-slate-800">🧩 制御ロジック (Short Syntax)</h2>
                     <div class="flex gap-2">
                         <button id="btn-run" onclick="toggleProgram()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-full font-bold shadow-md transition flex items-center">
                             <span id="run-icon" class="mr-2">▶</span> <span id="run-text">プログラム実行</span>
@@ -189,38 +211,51 @@
 
                 <div class="grid grid-cols-12 gap-4">
                     <div class="col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200 block-container">
-                        <p class="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Blocks</p>
+                        <p class="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Code Blocks</p>
                         
-                        <!-- カスタム条件ブロック -->
+                        <!-- 条件ブロック -->
                         <div class="block block-if text-white rounded shadow-sm overflow-hidden mb-4" draggable="true" data-type="custom_if_else">
-                            <div class="p-2 font-bold bg-orange-500 flex items-center gap-1 flex-wrap">
-                                <span>もし</span>
+                            <div class="delete-btn" title="Delete block">✕</div>
+                            <div class="p-2 bg-orange-500 flex items-center gap-1 flex-wrap pr-8">
+                                <span class="py-keyword">if</span>
                                 <select class="block-input sensor-select">
-                                    <option value="light">光量</option>
-                                    <option value="temp">気温</option>
-                                    <option value="ec">栄養</option>
+                                    <option value="light">light</option>
+                                    <option value="temp">temp</option>
+                                    <option value="ec">ec</option>
                                 </select>
                                 <select class="block-input operator-select">
-                                    <option value="lt">＜</option>
-                                    <option value="gt">＞</option>
-                                    <option value="eq">＝</option>
+                                    <option value="lt">&lt;</option>
+                                    <option value="gt">&gt;</option>
+                                    <option value="eq">==</option>
                                 </select>
-                                <input type="number" class="block-input value-input" value="100">
-                                <span>なら</span>
+                                <input type="number" class="block-input value-input" value="5000" step="100">
+                                <span class="py-keyword">:</span>
                             </div>
                             <div class="slot" data-role="then"></div>
-                            <div class="p-1 font-bold bg-orange-500 text-xs px-2">でなければ</div>
+                            <div class="p-1 bg-orange-600 px-2 flex items-center">
+                                <span class="py-keyword text-xs">else:</span>
+                            </div>
                             <div class="slot" data-role="else"></div>
                         </div>
 
-                        <div class="block block-action rounded" draggable="true" data-type="led_on">LEDをつける</div>
-                        <div class="block block-action rounded" draggable="true" data-type="led_off">LEDを消す</div>
-                        <div class="block block-action block-nutrient rounded" draggable="true" data-type="add_nutrient">肥料を投入</div>
+                        <!-- アクションブロック -->
+                        <div class="block block-action rounded" draggable="true" data-type="led_on">
+                            <div class="delete-btn" title="Delete block">✕</div>
+                            led_on()
+                        </div>
+                        <div class="block block-action rounded" draggable="true" data-type="led_off">
+                            <div class="delete-btn" title="Delete block">✕</div>
+                            led_off()
+                        </div>
+                        <div class="block block-action block-nutrient rounded" draggable="true" data-type="add_fertilizer">
+                            <div class="delete-btn" title="Delete block">✕</div>
+                            add_fertilizer()
+                        </div>
                     </div>
 
                     <div class="col-span-7">
-                        <div id="workspace" class="drop-zone p-4 overflow-auto max-h-[500px]"></div>
-                        <p class="text-[10px] text-slate-400 mt-2">※実行中は0.5秒ごとにこのロジックが評価されます。</p>
+                        <div id="workspace" class="drop-zone p-4 overflow-auto max-h-[500px] font-mono"></div>
+                        <p class="text-[10px] text-slate-400 mt-2">※ブロックをドラッグして条件を組み立ててください。</p>
                     </div>
                 </div>
             </div>
@@ -231,8 +266,8 @@
         // --- 状態管理 ---
         let state = {
             temp: 22.0,
-            ec: 1.5,
-            light: 60,
+            ec: 1.2,
+            light: 1200, // 初期光量 (lx)
             growth: 0,
             ledActive: false,
             isProgramRunning: false,
@@ -273,21 +308,20 @@
                 if (draggedElement.closest('.block-container')) {
                     blockToDrop = draggedElement.cloneNode(true);
                     
-                    // クローンした要素内のドロップダウンや入力値がリセットされないようにする
                     const selects = draggedElement.querySelectorAll('select');
                     const cloneSelects = blockToDrop.querySelectorAll('select');
                     selects.forEach((s, i) => cloneSelects[i].value = s.value);
-                    
                     const inputs = draggedElement.querySelectorAll('input');
                     const cloneInputs = blockToDrop.querySelectorAll('input');
                     inputs.forEach((inpt, i) => cloneInputs[i].value = inpt.value);
 
-                    blockToDrop.onclick = (ev) => { 
-                        // 入力欄クリック時は削除しない
-                        if (ev.target.tagName === 'SELECT' || ev.target.tagName === 'INPUT') return;
-                        ev.stopPropagation(); 
-                        blockToDrop.remove(); 
-                    };
+                    const btn = blockToDrop.querySelector('.delete-btn');
+                    if (btn) {
+                        btn.onclick = (ev) => {
+                            ev.stopPropagation();
+                            blockToDrop.remove();
+                        };
+                    }
                 } else { 
                     blockToDrop = draggedElement; 
                 }
@@ -313,7 +347,7 @@
                     let condition = false;
                     if (operator === 'lt') condition = currentValue < targetValue;
                     if (operator === 'gt') condition = currentValue > targetValue;
-                    if (operator === 'eq') condition = Math.abs(currentValue - targetValue) < 0.1;
+                    if (operator === 'eq') condition = Math.abs(currentValue - targetValue) < 1;
 
                     const thenSlot = block.querySelector('[data-role="then"]');
                     const elseSlot = block.querySelector('[data-role="else"]');
@@ -328,37 +362,37 @@
             switch(type) {
                 case 'led_on': state.ledActive = true; break;
                 case 'led_off': state.ledActive = false; break;
-                case 'add_nutrient': state.ec = Math.min(3.0, state.ec + 0.05); break;
+                case 'add_fertilizer': state.ec = Math.min(3.0, state.ec + 0.02); break;
             }
         }
 
         // --- メインループ ---
         function coreLoop() {
             const now = Date.now();
-            const dt = (now - state.lastTick) / 1000;
             state.lastTick = now;
 
-            // 1. 環境の自然変化
+            // 環境シミュレーション
             state.temp += (Math.random() - 0.5) * 0.05;
-            state.ec = Math.max(0, state.ec - 0.002);
-            const ambientLight = 50 + Math.sin(now / 5000) * 20; 
-            state.light = state.ledActive ? 400 : ambientLight;
+            state.ec = Math.max(0, state.ec - 0.001); 
+            
+            // 環境光: 500lx 〜 2000lx (室内または曇天を想定)
+            const ambientLux = 1200 + Math.sin(now / 15000) * 700; 
+            // LED点灯時は +15,000lx 加算 (合計 16,000〜17,000lx 程度)
+            state.light = state.ledActive ? ambientLux + 15000 : ambientLux;
 
-            // 2. プログラムの実行
             if (state.isProgramRunning) {
                 const rootBlocks = document.getElementById('workspace').children;
                 executeBlockList(rootBlocks);
             }
 
-            // 3. 植物の成長計算
+            // 生育量計算 (10,000lx以上, EC 1.2-2.2 が最適)
             let growthStep = 0;
-            if (state.light > 250) growthStep += 0.05;
-            if (state.ec >= 1.0 && state.ec <= 2.2) growthStep += 0.08;
+            if (state.light > 10000) growthStep += 0.06;
+            if (state.ec >= 1.2 && state.ec <= 2.2) growthStep += 0.08;
             state.growth += growthStep;
 
-            // 4. 収穫サイクル
             if (state.growth >= 100) {
-                addLog("収穫しました！新しい苗を植えます。", "success");
+                addLog("Harvest cycle complete! Re-planting.", "success");
                 state.growth = 0;
             }
 
@@ -383,14 +417,13 @@
             }
 
             const waterHeight = 10 + Math.sin(Date.now() / 1000) * 2;
-            const ecColor = `rgba(56, ${Math.max(100, 255 - state.ec * 50)}, 248, 0.4)`;
+            const ecColor = `rgba(56, ${Math.max(120, 255 - state.ec * 60)}, 248, 0.4)`;
             for(let i=1; i<=6; i++) {
                 const w = document.getElementById(`water-${i}`);
                 if (w) {
                     w.style.height = `${waterHeight}px`;
                     w.style.backgroundColor = ecColor;
                 }
-                
                 const p = document.getElementById(`p${i}`);
                 if (p) {
                     const scale = 0.5 + (state.growth / 100);
@@ -402,7 +435,6 @@
             }
         }
 
-        // --- UI操作 ---
         function toggleProgram() {
             state.isProgramRunning = !state.isProgramRunning;
             const btn = document.getElementById('btn-run');
@@ -412,28 +444,28 @@
             if (state.isProgramRunning) {
                 btn.classList.replace('bg-emerald-500', 'bg-rose-500');
                 btn.classList.replace('hover:bg-emerald-600', 'hover:bg-rose-600');
-                text.innerText = "プログラム停止";
+                text.innerText = "STOP PROGRAM";
                 icon.innerText = "■";
-                addLog("制御プログラムを開始しました", "success");
+                addLog("Control sequence initiated.", "success");
             } else {
                 btn.classList.replace('bg-rose-500', 'bg-emerald-500');
                 btn.classList.replace('hover:bg-rose-600', 'hover:bg-emerald-600');
-                text.innerText = "プログラム実行";
+                text.innerText = "RUN PROGRAM";
                 icon.innerText = "▶";
-                addLog("制御プログラムを停止しました（手動モード）", "error");
+                addLog("System switched to Manual mode.", "error");
             }
         }
 
         function resetSim() {
             state.temp = 22.0;
-            state.ec = 1.5;
+            state.ec = 1.2;
             state.growth = 0;
             state.ledActive = false;
-            addLog("環境をリセットしました");
+            addLog("System parameters reset.");
         }
 
         window.onload = () => {
-            addLog("システムモニタ起動完了");
+            addLog("Smart Farm OS initialized.");
             coreLoop();
         };
     </script>
