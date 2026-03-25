@@ -603,7 +603,7 @@
         function updateCharts() {
             pushChart('temp',   state.temp);
             pushChart('humid',  state.humid);
-            pushChart('light',  state.light);
+            pushChart('light',  state.sunLux);
             pushChart('growth', state.growth);
             pushChart('damage', state.damage * 100);
 
@@ -703,7 +703,7 @@
         function render() {
             document.getElementById('sensor-temp').innerText = state.temp.toFixed(1);
             document.getElementById('sensor-ec').innerText = state.ec.toFixed(2);
-            document.getElementById('sensor-light').innerText = Math.round(state.light);
+            document.getElementById('sensor-light').innerText = Math.round(state.sunLux);
             document.getElementById('growth-bar').style.width = `${state.growth}%`;
             document.getElementById('sensor-humid').innerText = state.humid.toFixed(1);
             document.getElementById('damage-bar').style.width = `${(state.damage * 100).toFixed(1)}%`;
