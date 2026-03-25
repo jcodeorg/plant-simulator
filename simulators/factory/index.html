@@ -434,6 +434,61 @@
         </div>
     </div>
 
+    <!-- 結果モーダル -->
+    <div id="result-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 w-full max-w-lg mx-4">
+            <div class="text-center mb-5">
+                <div id="result-icon" class="text-5xl mb-2"></div>
+                <h2 id="result-title" class="text-xl font-bold text-slate-800"></h2>
+                <p id="result-subtitle" class="text-sm text-slate-500 mt-1"></p>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="bg-purple-50 rounded-xl p-3 border border-purple-100">
+                    <p class="text-[10px] text-purple-600 font-bold uppercase">最終成長率</p>
+                    <p class="text-2xl font-bold text-purple-700" id="res-growth">-</p>
+                </div>
+                <div class="bg-rose-50 rounded-xl p-3 border border-rose-100">
+                    <p class="text-[10px] text-rose-600 font-bold uppercase">ダメージ</p>
+                    <p class="text-2xl font-bold text-rose-600" id="res-damage">-</p>
+                </div>
+                <div class="bg-amber-50 rounded-xl p-3 border border-amber-100">
+                    <p class="text-[10px] text-amber-600 font-bold uppercase">徒長度</p>
+                    <p class="text-2xl font-bold text-amber-600" id="res-etiol">-</p>
+                </div>
+                <div class="bg-sky-50 rounded-xl p-3 border border-sky-100">
+                    <p class="text-[10px] text-sky-600 font-bold uppercase">経過日数</p>
+                    <p class="text-2xl font-bold text-sky-700" id="res-days">-</p>
+                </div>
+            </div>
+            <!-- 詳細ステータス -->
+            <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 mb-3">
+                <p class="text-[10px] text-slate-500 font-bold uppercase mb-2">📊 詳細ステータス</p>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                        <p class="text-[10px] text-slate-400">最高到達成長</p>
+                        <p class="text-sm font-bold text-slate-700" id="res-maxgrowth">-</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-400">LED稼山率</p>
+                        <p class="text-sm font-bold text-slate-700" id="res-ledpct">-</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-400">到達ステージ</p>
+                        <p class="text-sm font-bold text-slate-700" id="res-stage">-</p>
+                    </div>
+                </div>
+            </div>
+            <!-- 分析コメント -->
+            <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 mb-4">
+                <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">💡 分析</p>
+                <ul id="result-comments" class="text-xs text-slate-700 space-y-1 list-none"></ul>
+            </div>
+            <button onclick="resetSim()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-full transition text-sm">
+                🔄 新しいシミュレーションを開始
+            </button>
+        </div>
+    </div>
+
     <script src="WeatherGenerator.js"></script>
     <script src="PlantSimulator.js"></script>
     <script>
@@ -441,7 +496,7 @@
         const lettuce = new PlantSimulator();
         const weather = new WeatherGenerator();
 
-        let weatherData  = [];  // generateMonthData() の結果 (30日×24時間)
+        let weatherData  = [];  // generateMonthData() の結果 (45日×24時間)
         let weatherIndex = 0;   // 現在の時間インデックス
         let simAccum     = 0;   // 蓄積経過（シミュレーション時間・時間単位）
         let simSpeed     = 0;   // 速度: 単位は時間/実秒 (0=停止, 最大6=6時間/実秒)
@@ -460,8 +515,12 @@
             isProgramRunning: false,
             etiolation: 0,          // 徒長度 0.0(正常)〜1.0(重度徒長)
             stageName: '発芽期',    // 現在の成長ステージ名
+            simFinished: false,     // シミュレーション終了フラグ
             lastTick: Date.now()
         };
+
+        // シミュレーション統計情報
+        let simStats = { maxGrowth: 0, ledOnHours: 0, totalHours: 0 };
 
         const LED_LUX = 8000;  // LED 加算光量 (lx)
 
@@ -601,8 +660,8 @@
         }
 
         // --- グラフ描画 ---
-        // 全期間（最大 30日×24時間=720点）を保持し全て表示
-        const CHART_MAX = 720;
+        // 全期間（最大 45日×24時間=1080点）を保持し全て表示
+        const CHART_MAX = 1080;
         const chartData = {
             temp:   [],
             humid:  [],
@@ -676,15 +735,17 @@
             const realDt = Math.min((now - state.lastTick) / 1000, 0.1);
             state.lastTick = now;
 
-            if (simSpeed > 0 && weatherData.length > 0) {
+            if (simSpeed > 0 && weatherData.length > 0 && !state.simFinished) {
                 simAccum += realDt * simSpeed;
 
                 while (simAccum >= 1.0) {
                     simAccum -= 1.0;
 
                     if (weatherIndex >= weatherData.length) {
-                        weatherIndex = 0;
-                        addLog("シミュレーションデータが一周しました。再ループします。", "info");
+                        // 45日データ終了 → 結果表示して停止
+                        const lastW = weatherData[weatherData.length - 1];
+                        showResult('completed', lastW.day);
+                        break;
                     }
 
                     const w = weatherData[weatherIndex];
@@ -722,16 +783,19 @@
                     state.waterLevel = simStatus.waterLevel;
                     state.etiolation = simStatus.etiolation;
                     state.stageName  = simStatus.stageName;
+                    // 統計更新
+                    simStats.totalHours++;
+                    if (state.ledActive) simStats.ledOnHours++;
+                    if (state.growth > simStats.maxGrowth) simStats.maxGrowth = state.growth;
 
                     if (simStatus.damage >= 1.0) {
-                        addLog(`Day${w.day} 枯れてしまいました... リセットします。`, "error");
-                        resetSim();
+                        addLog(`Day${w.day} 枯れてしまいました...`, "error");
+                        showResult('died', w.day);
                         break;
                     } else if (simStatus.growth >= 1.0) {
-                        addLog(`Day${w.day} 収穫サイクル完了！ 再植付けします。`, "success");
-                        lettuce.state.growth  = 0;
-                        lettuce.state.damage *= 0.5;
-                        state.growth = 0;
+                        addLog(`Day${w.day} 収穫サイクル完了！`, "success");
+                        showResult('harvested', w.day);
+                        break;
                     }
 
                     weatherIndex++;
@@ -930,6 +994,69 @@
             }
         }
 
+        function showResult(outcome, endDay) {
+            state.simFinished = true;
+            simSpeed = 0;
+            document.getElementById('speed-slider').value = 0;
+            document.getElementById('speed-label').textContent = '停止中';
+
+            const icons    = { harvested: '🥬', died: '🍂', completed: '📊' };
+            const titles   = { harvested: '収穫完了！', died: '椒れてしまいました', completed: 'シミュレーション終了' };
+            const subtitles = {
+                harvested: `Day ${endDay}に収穫サイクルを達成しました`,
+                died:      `Day ${endDay}に植物が椒死しました`,
+                completed: `45日間のシミュレーションが完了しました`
+            };
+
+            document.getElementById('result-icon').textContent  = icons[outcome];
+            document.getElementById('result-title').textContent = titles[outcome];
+            document.getElementById('result-subtitle').textContent = subtitles[outcome];
+
+            document.getElementById('res-growth').textContent   = `${state.growth.toFixed(1)}%`;
+            document.getElementById('res-damage').textContent   = `${(state.damage * 100).toFixed(1)}%`;
+            document.getElementById('res-etiol').textContent    = `${(state.etiolation * 100).toFixed(1)}%`;
+            const elapsedDays = (simStats.totalHours / 24).toFixed(1);
+            document.getElementById('res-days').textContent     = `${elapsedDays}日`;
+            document.getElementById('res-maxgrowth').textContent = `${simStats.maxGrowth.toFixed(1)}%`;
+            const ledPct = simStats.totalHours > 0
+                ? Math.round(simStats.ledOnHours / simStats.totalHours * 100) : 0;
+            document.getElementById('res-ledpct').textContent   = `${ledPct}%`;
+            document.getElementById('res-stage').textContent    = state.stageName;
+
+            // 分析コメント生成
+            const comments = [];
+            if (outcome === 'harvested') {
+                comments.push({ icon: '✅', text: '理想的な成長サイクルを完達しました！' });
+            }
+            if (state.etiolation > 0.5) {
+                comments.push({ icon: '⚠️', text: '徒長が重度です。LED照明を強化か常時点灯にすると改善できます。' });
+            } else if (state.etiolation > 0.2) {
+                comments.push({ icon: '🟡', text: '徒長が認められます。少し光量を増やすと良いでしょう。' });
+            } else {
+                comments.push({ icon: '🟢', text: '徒長なし。山が正常です。' });
+            }
+            if (state.damage > 0.6) {
+                comments.push({ icon: '🔴', text: 'ダメージが深刻です。温湿度管理や水位の見直しを検討してください。' });
+            } else if (state.damage > 0.3) {
+                comments.push({ icon: '🟡', text: 'ダメージが襲積しています。ストレス要因を確認してください。' });
+            } else {
+                comments.push({ icon: '🟢', text: 'ダメージは最小限です。' });
+            }
+            if (ledPct < 30) {
+                comments.push({ icon: '💡', text: `LED稼山率が${ledPct}%です。屋内良育には追加照明が効果的です。` });
+            }
+            if (simStats.maxGrowth < 30 && outcome !== 'harvested') {
+                comments.push({ icon: '🟡', text: '成長が幼苗期で停滞しました。EC値・光量・温度を紹合的に見直してください。' });
+            }
+
+            const ul = document.getElementById('result-comments');
+            ul.innerHTML = comments
+                .map(c => `<li class="flex items-start gap-1.5"><span>${c.icon}</span><span>${c.text}</span></li>`)
+                .join('');
+
+            document.getElementById('result-modal').classList.remove('hidden');
+        }
+
         function changeMonth(month) {
             const m = parseInt(month);
             // まずシミュレータをフルリセット
@@ -963,6 +1090,11 @@
         }
 
         function resetSim() {
+            // モーダルを閉じる
+            document.getElementById('result-modal').classList.add('hidden');
+
+            state.simFinished = false;
+            simStats = { maxGrowth: 0, ledOnHours: 0, totalHours: 0 };
             state.temp   = 22.0;
             state.ec     = 1.2;
             state.growth = 0;
@@ -994,7 +1126,7 @@
             initWeather(4);
             addLog("Smart Farm OS initialized.");
             addLog("PlantSimulator (サニーレタス) 読み込み完了。", "success");
-            addLog("WeatherGenerator (東京・4月 30日分) 読み込み完了。", "success");
+            addLog("WeatherGenerator (東京・4月 45日分) 読み込み完了。", "success");
             addLog("速度スライダーを動かしてシミュレーションを開始してください。", "info");
             coreLoop();
         };
