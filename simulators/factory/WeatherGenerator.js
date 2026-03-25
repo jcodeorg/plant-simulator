@@ -22,11 +22,11 @@ class WeatherGenerator {
         // 晴天時の窓際を想定（夏: 5000lx、春/秋: 4000lx、冬: 2500lx）
         const peakMap = {
             1:  2500,
-            4:  20000,
+            4:  15000,
             7:  5000,
-            10: 4000
+            10: 11000
         };
-        const peakLux = opts.peakLux || peakMap[month] || 4000;
+        const peakLux = (opts.peakLux != null) ? opts.peakLux : (peakMap[month] ?? 4000);
         const sunrise = (typeof opts.sunrise === 'number') ? opts.sunrise : 6;
         const sunset  = (typeof opts.sunset === 'number')  ? opts.sunset  : 18;
 

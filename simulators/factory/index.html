@@ -330,15 +330,15 @@
                 <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
                     <div class="flex flex-col">
                         <label class="text-slate-500">日の出 (hour)</label>
-                        <input id="sunrise-input" type="number" min="0" max="23" value="6" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()">
+                        <input id="sunrise-input" type="number" min="0" max="23" value="6" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
                     </div>
                     <div class="flex flex-col">
                         <label class="text-slate-500">日の入り (hour)</label>
-                        <input id="sunset-input" type="number" min="0" max="23" value="18" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()">
+                        <input id="sunset-input" type="number" min="0" max="23" value="18" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
                     </div>
                     <div class="flex flex-col">
                         <label class="text-slate-500">ピーク照度 (lux)</label>
-                        <input id="peak-input" type="number" min="0" step="100" value="5000" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()">
+                        <input id="peak-input" type="number" min="0" step="1000" value="5000" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
                     </div>
                 </div>
             </div>
@@ -1198,6 +1198,8 @@
         // --- 速度・天候制御 ---
         function startSim() {
             if (state.simFinished) return;
+            // 入力欄の最新値を確実に反映してから開始
+            applyAndRegenerateWeather();
             simPaused = false;
             const startBtn = document.getElementById('btn-start');
             startBtn.disabled = true;
@@ -1365,17 +1367,53 @@
 
         function changeMonth(month) {
             const m = parseInt(month);
-            // まずシミュレータをフルリセット
+            // 月ごとのデフォルト太陽設定
+            const monthDefaults = {
+                1:  { sunrise: 7, sunset: 17, peakLux:  9000 }, // 冬
+                4:  { sunrise: 6, sunset: 18, peakLux: 50000 }, // 春
+                7:  { sunrise: 5, sunset: 19, peakLux: 20000 }, // 夏
+                10: { sunrise: 6, sunset: 17, peakLux: 12000 }, // 秋
+            };
+            const defaults = monthDefaults[m] || monthDefaults[4];
+
+            // sunSettings を月のデフォルト値で上書き
+            sunSettings.sunrise = defaults.sunrise;
+            sunSettings.sunset  = defaults.sunset;
+            sunSettings.peakLux = defaults.peakLux;
+
+            // UI 入力欄にも反映
+            document.getElementById('sunrise-input').value = sunSettings.sunrise;
+            document.getElementById('sunset-input').value  = sunSettings.sunset;
+            document.getElementById('peak-input').value    = sunSettings.peakLux;
+
+            // シミュレータをフルリセットして新しい天候データで再生成
             resetSim();
-            // 指定月の天候データで再生成
             weatherData = weather.generateMonthData(m, sunSettings);
-            addLog(`${m}月のデータでシミュレーターを再起動しました。`, "success");
+            addLog(`${m}月のデータでシミュレーターを再起動しました（日の出 ${sunSettings.sunrise}時 / 日の入り ${sunSettings.sunset}時 / ピーク ${sunSettings.peakLux.toLocaleString()}lx）`, "success");
         }
 
         function initWeather(month) {
             weatherData  = weather.generateMonthData(month, sunSettings);
             weatherIndex = 0;
             simAccum     = 0;
+        }
+
+        let _sunSettingsTimer = null;
+
+        // デバウンスなし即時版（startSim から呼ぶ）
+        function applyAndRegenerateWeather() {
+            clearTimeout(_sunSettingsTimer);
+            const sr = parseInt(document.getElementById('sunrise-input').value, 10);
+            const ss = parseInt(document.getElementById('sunset-input').value, 10);
+            const pk = parseInt(document.getElementById('peak-input').value, 10);
+            sunSettings.sunrise = Math.max(0, Math.min(23, isNaN(sr) ? sunSettings.sunrise : sr));
+            sunSettings.sunset  = Math.max(0, Math.min(23, isNaN(ss) ? sunSettings.sunset : ss));
+            sunSettings.peakLux = Math.max(0, isNaN(pk) ? sunSettings.peakLux : pk);
+            const monthSel = document.getElementById('month-select');
+            const m = parseInt(monthSel.value || 4, 10);
+            weatherData = weather.generateMonthData(m, sunSettings);
+            weatherIndex = 0;
+            simAccum = 0;
         }
 
         function updateSunSettings() {
@@ -1386,13 +1424,16 @@
             sunSettings.sunset  = Math.max(0, Math.min(23, isNaN(ss) ? sunSettings.sunset : ss));
             sunSettings.peakLux = Math.max(0, isNaN(pk) ? sunSettings.peakLux : pk);
 
-            // 再生成（現在の月を保持）
-            const monthSel = document.getElementById('month-select');
-            const m = parseInt(monthSel.value || 4, 10);
-            weatherData = weather.generateMonthData(m, sunSettings);
-            weatherIndex = 0;
-            simAccum = 0;
-            addLog(`太陽設定を更新: 日の出 ${sunSettings.sunrise} / 日の入り ${sunSettings.sunset} / ピーク ${sunSettings.peakLux} lx`, "info");
+            // 再生成（oninput連打でも300ms後に1回だけ実行）
+            clearTimeout(_sunSettingsTimer);
+            _sunSettingsTimer = setTimeout(() => {
+                const monthSel = document.getElementById('month-select');
+                const m = parseInt(monthSel.value || 4, 10);
+                weatherData = weather.generateMonthData(m, sunSettings);
+                weatherIndex = 0;
+                simAccum = 0;
+                addLog(`太陽設定を更新: 日の出 ${sunSettings.sunrise} / 日の入り ${sunSettings.sunset} / ピーク ${sunSettings.peakLux} lx`, "info");
+            }, 300);
         }
 
         function resetSim() {
