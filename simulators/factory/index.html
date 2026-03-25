@@ -819,7 +819,7 @@
                     }
 
                     // PlantSimulator で1時間分更新 (dt=1.0)
-                    const simStatus = lettuce.update(state.temp, state.humid, state.light, 1.0);
+                    const simStatus = lettuce.update(state.temp, state.humid, state.light, 1.0, w.hour);
                     state.growth     = simStatus.growth * 100;
                     state.damage     = simStatus.damage;
                     state.waterLevel = simStatus.waterLevel;
@@ -870,11 +870,8 @@
                 state.humid  = dw.humidity;
                 state.sunLux = dw.lux;
                 state.hour   = dw.hour;
-                // ブロックがない場合のみ太陽光スケジュールでLEDを制御
-                const frameBlocks = document.getElementById('workspace').children;
-                if (frameBlocks.length === 0) {
-                    state.ledActive = dw.lux > 0;
-                }
+                // state.ledActive はシミュレーションステップ・手動操作のみが変更する
+                // 描画フレームでは上書きしない
                 state.light = state.sunLux + (state.ledActive ? LED_LUX : 0);
             }
 

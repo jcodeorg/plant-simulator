@@ -91,6 +91,7 @@ class PlantSimulator {
 
         // 「昼間の光不足」または「エネルギー不足の夜」に進行
         if ((isDaytime && l < lightThreshold) || (!isDaytime && this.state.isLightDeficit)) {
+            console.log(hour, isDaytime, l < lightThreshold, this.state.isLightDeficit);
             const deficit = isDaytime ? (lightThreshold - l) / lightThreshold : 0.5;
             const tFactor = t > 22 ? (t - 22) * 0.1 + 1 : 1;
             etiolStep = deficit * tFactor * sp.etiolSens * 0.01;
