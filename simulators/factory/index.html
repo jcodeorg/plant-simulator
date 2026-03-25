@@ -409,6 +409,7 @@
                                         <option value="light">light</option>
                                         <option value="temp">temp</option>
                                         <option value="ec">ec</option>
+                                        <option value="hour">hour</option>
                                     </select>
                                     <select class="block-input operator-select">
                                         <option value="lt">&lt;</option>
@@ -509,10 +510,13 @@
                 <ul id="result-comments" class="text-xs text-slate-700 space-y-1 list-none"></ul>
             </div>
             <div class="flex gap-2">
-                <button onclick="downloadCSV()" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2.5 rounded-full transition text-sm">
+                <button id="modal-resume-btn" onclick="resumeFromPause()" class="hidden flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 rounded-full transition text-sm">
+                    ▶ 再開する
+                </button>
+                <button id="modal-csv-btn" onclick="downloadCSV()" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2.5 rounded-full transition text-sm">
                     📥 CSVダウンロード
                 </button>
-                <button onclick="resetSim()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-full transition text-sm">
+                <button id="modal-reset-btn" onclick="resetSim()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-full transition text-sm">
                     🔄 新しいシミュレーション
                 </button>
             </div>
@@ -635,8 +639,9 @@
                     
                     let currentValue = 0;
                     if (sensorType === 'light') currentValue = state.light;
-                    if (sensorType === 'temp') currentValue = state.temp;
-                    if (sensorType === 'ec') currentValue = state.ec;
+                    if (sensorType === 'temp')  currentValue = state.temp;
+                    if (sensorType === 'ec')    currentValue = state.ec;
+                    if (sensorType === 'hour')  currentValue = state.hour;
 
                     let condition = false;
                     if (operator === 'lt') condition = currentValue < targetValue;
@@ -878,6 +883,7 @@
                 state.temp   = dw.temp;
                 state.humid  = dw.humidity;
                 state.sunLux = dw.lux;
+                state.hour   = dw.hour;
                 // 手動モード局外、かつ制御ブロック局外のときのみ天候スケジュールでLEDを制御
                 if (!state.ledManualMode && !state.isProgramRunning) {
                     state.ledActive = dw.lux > 0;
@@ -1082,12 +1088,24 @@
             if (simPaused) {
                 pauseBtn.textContent = '▶ 再開';
                 pauseBtn.className = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
-                addLog('一時停止。', 'info');
+                // 一時停止時に中間評価モーダルを表示
+                const ci = Math.min(weatherIndex, weatherData.length - 1);
+                const cw = weatherData[ci];
+                showResult('paused', cw.day);
             } else {
                 pauseBtn.textContent = '⏸ 一時停止';
                 pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
                 addLog('再開。', 'info');
             }
+        }
+
+        function resumeFromPause() {
+            document.getElementById('result-modal').classList.add('hidden');
+            simPaused = false;
+            const pauseBtn = document.getElementById('btn-pause');
+            pauseBtn.textContent = '⏸ 一時停止';
+            pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
+            addLog('シミュレーションを再開しました。', 'info');
         }
 
         function updateSpeed(val) {
@@ -1101,22 +1119,26 @@
         }
 
         function showResult(outcome, endDay) {
-            state.simFinished = true;
-            simPaused = true;
-            // ボタンを終了状態に
-            const pauseBtn = document.getElementById('btn-pause');
-            if (pauseBtn) {
-                pauseBtn.disabled = true;
-                pauseBtn.className = 'flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed';
-                pauseBtn.textContent = '⏸ 一時停止';
+            const isPause = outcome === 'paused';
+            if (!isPause) {
+                state.simFinished = true;
+                simPaused = true;
+                // ボタンを終了状態に
+                const pauseBtn = document.getElementById('btn-pause');
+                if (pauseBtn) {
+                    pauseBtn.disabled = true;
+                    pauseBtn.className = 'flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed';
+                    pauseBtn.textContent = '⏸ 一時停止';
+                }
             }
 
-            const icons    = { harvested: '🥬', died: '🍂', completed: '📊' };
-            const titles   = { harvested: '収穫完了！', died: '椒れてしまいました', completed: 'シミュレーション終了' };
+            const icons    = { harvested: '🥬', died: '🍂', completed: '📊', paused: '⏸' };
+            const titles   = { harvested: '収穫完了！', died: '椒れてしまいました', completed: 'シミュレーション終了', paused: '一時停止中 — 中間評価' };
             const subtitles = {
                 harvested: `Day ${endDay}に収穫サイクルを達成しました`,
                 died:      `Day ${endDay}に植物が椒死しました`,
-                completed: `45日間のシミュレーションが完了しました`
+                completed: `45日間のシミュレーションが完了しました`,
+                paused:    `Day ${endDay} 時点の評価です（再開できます）`
             };
 
             document.getElementById('result-icon').textContent  = icons[outcome];
@@ -1173,6 +1195,15 @@
                 .map(c => `<li class="flex items-start gap-1.5"><span>${c.icon}</span><span>${c.text}</span></li>`)
                 .join('');
 
+            // ボタン切り替え: 一時停止時は「再開」を表示、終了時はCSVダウンロードを表示
+            const resumeBtn = document.getElementById('modal-resume-btn');
+            const csvBtn    = document.getElementById('modal-csv-btn');
+            const resetBtn  = document.getElementById('modal-reset-btn');
+            if (resumeBtn) resumeBtn.classList.toggle('hidden', !isPause);
+            if (csvBtn)    csvBtn.classList.toggle('hidden', isPause);
+            if (resetBtn)  resetBtn.textContent = isPause ? '🔄 リセット' : '🔄 新しいシミュレーション';
+
+            if (isPause) addLog(`Day ${endDay} 一時停止 — 中間評価を表示中`, 'info');
             document.getElementById('result-modal').classList.remove('hidden');
         }
 
