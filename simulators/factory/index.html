@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; overflow-x: hidden; background-color: #f0f4f8; }
-        .block-container { height: 500px; overflow-y: auto; }
+        .block-container { height: 380px; overflow-y: auto; }
         
         /* ブロックの基本スタイル */
         .block { 
@@ -92,7 +92,7 @@
             background: #1e293b;
             border: 8px solid #475569;
             border-radius: 12px;
-            height: 280px;
+            height: 190px;
             position: relative;
             padding: 10px;
             display: grid;
@@ -154,7 +154,7 @@
             box-shadow: 0 5px 25px rgba(253, 224, 71, 1);
         }
 
-        .log-panel { font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; }
+        .log-panel { font-family: monospace; font-size: 11px; height: 56px; overflow-y: auto; }
         .slot-highlight { background-color: rgba(255, 255, 255, 0.5) !important; border: 1px solid white !important; }
         /* グラフ */
         .chart-wrap { position: relative; width: 100%; }
@@ -169,8 +169,8 @@
 
         /* 手動ボタン */
         .manual-btn { display: flex; flex-direction: column; align-items: center; justify-content: center;
-                      gap: 2px; padding: 10px 0; border-radius: 12px; border: 2px solid;
-                      font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; width: 100%; }
+                      gap: 1px; padding: 5px 0; border-radius: 8px; border: 2px solid;
+                      font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s; width: 100%; }
 
         /* 光量オーバーレイ */
         #light-overlay {
@@ -180,13 +180,13 @@
         }
     </style>
 </head>
-<body class="p-4 bg-slate-100">
-    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+<body class="p-2 bg-slate-100">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-3">
         
         <!-- 左側：シミュレーター -->
-        <div class="lg:col-span-5 space-y-4">
-            <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
-                <div class="flex justify-between items-center mb-4">
+        <div class="lg:col-span-5 space-y-2">
+            <div class="bg-white p-3 rounded-2xl shadow-lg border border-slate-200">
+                <div class="flex justify-between items-center mb-2">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center">
                         <span class="mr-2">🏪</span> 植物ショーケース
                     </h2>
@@ -206,7 +206,7 @@
                 </div>
 
                 <!-- シミュレーション制御 -->
-                <div class="mt-3 border-t border-slate-100 pt-3">
+                <div class="mt-2 border-t border-slate-100 pt-2">
                     <div class="flex items-center justify-between mb-2">
                         <h3 class="font-bold text-slate-700 text-sm">⏱ シミュレーション制御</h3>
                         <span id="sim-clock" class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">Day 1 - 00:00</span>
@@ -317,10 +317,10 @@
 
         <!-- 右側：制御ロジック -->
         <div class="lg:col-span-7 space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-lg border border-slate-200 flex flex-col">
+            <div class="bg-white p-3 rounded-2xl shadow-lg border border-slate-200 flex flex-col">
 
                 <!-- ヘッダー: タブ -->
-                <div class="flex items-center mb-4">
+                <div class="flex items-center mb-2">
                     <div class="flex gap-2">
                         <button id="tab-manual" class="tab-btn active" onclick="switchTab('manual')">&#128075; 手動</button>
                         <button id="tab-auto"   class="tab-btn inactive" onclick="switchTab('auto')">&#129520; 自動</button>
@@ -328,30 +328,30 @@
                 </div>
 
                 <!-- 手動タブ -->
-                <div id="panel-manual">
-                    <!-- 環境センサー 2×2 -->
-                    <div class="grid grid-cols-2 gap-3 mb-3 text-sm">
-                        <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                            <p class="text-[10px] text-blue-600 font-bold uppercase">Temperature (気温)</p>
-                            <p class="text-lg font-bold text-slate-700"><span id="sensor-temp">24.0</span>°C</p>
+                <div id="panel-manual" class="overflow-y-auto" style="max-height:calc(100vh - 5.5rem)">
+                    <!-- 環境センサー 1×4 -->
+                    <div class="grid grid-cols-4 gap-2 mb-2">
+                        <div class="bg-blue-50 p-1.5 rounded-lg border border-blue-100">
+                            <p class="text-[9px] text-blue-600 font-bold uppercase leading-tight">気温</p>
+                            <p class="text-sm font-bold text-slate-700"><span id="sensor-temp">24.0</span>°C</p>
                         </div>
-                        <div class="bg-sky-50 p-2 rounded-lg border border-sky-100">
-                            <p class="text-[10px] text-sky-600 font-bold uppercase">Humidity (湿度)</p>
-                            <p class="text-lg font-bold text-slate-700"><span id="sensor-humid">55.0</span>%</p>
+                        <div class="bg-sky-50 p-1.5 rounded-lg border border-sky-100">
+                            <p class="text-[9px] text-sky-600 font-bold uppercase leading-tight">湿度</p>
+                            <p class="text-sm font-bold text-slate-700"><span id="sensor-humid">55.0</span>%</p>
                         </div>
-                        <div class="bg-green-50 p-2 rounded-lg border border-green-100">
-                            <p class="text-[10px] text-green-600 font-bold uppercase">EC Value (EC値)</p>
-                            <p class="text-lg font-bold text-slate-700"><span id="sensor-ec">1.2</span> <small>mS/cm</small></p>
+                        <div class="bg-green-50 p-1.5 rounded-lg border border-green-100">
+                            <p class="text-[9px] text-green-600 font-bold uppercase leading-tight">EC値</p>
+                            <p class="text-sm font-bold text-slate-700"><span id="sensor-ec">1.2</span> <small>mS</small></p>
                         </div>
-                        <div class="bg-yellow-50 p-2 rounded-lg border border-yellow-100">
-                            <p class="text-[10px] text-yellow-600 font-bold uppercase">Light / Sensor (太陽光センサ)</p>
-                            <p class="text-lg font-bold text-slate-700"><span id="sensor-light">1200</span> <small>lx</small></p>
-                            <p class="text-[10px] text-slate-400 mt-0.5">出力: <span id="sensor-light-total">1200</span> lx</p>
+                        <div class="bg-yellow-50 p-1.5 rounded-lg border border-yellow-100">
+                            <p class="text-[9px] text-yellow-600 font-bold uppercase leading-tight">太陽光</p>
+                            <p class="text-sm font-bold text-slate-700"><span id="sensor-light">1200</span> <small>lx</small></p>
+                            <p class="text-[9px] text-slate-400">出力: <span id="sensor-light-total">1200</span></p>
                         </div>
                     </div>
 
                     <!-- ステージタイムライン (フル幅) -->
-                    <div class="mb-3 bg-slate-50 rounded-xl px-3 pt-2 pb-2 border border-slate-200">
+                    <div class="mb-2 bg-slate-50 rounded-lg px-2 pt-1.5 pb-1.5 border border-slate-200">
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-[10px] font-bold text-slate-500 uppercase">🌿 成長ステージ</span>
                             <span class="text-[10px] text-slate-400" id="stage-req">💡 300lx | 🌡️ 22°C</span>
@@ -403,36 +403,36 @@
                         <span id="storage-status" class="text-[10px] font-bold shrink-0"></span>
                     </div>
                     <!-- ダメージ原因内訳 -->
-                    <div class="mb-3 bg-white border border-slate-200 rounded-xl p-3">
+                    <div class="mb-2 bg-white border border-slate-200 rounded-lg p-2">
                         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">📊 ダメージ原因内訳 <span class="normal-case font-normal text-slate-400">(現在時間あたり)</span></p>
                         <div id="stress-breakdown" class="space-y-1.5"></div>
                     </div>
 
                     <!-- グラフエリア -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">🌡️ 気温 (°C)</p>
-                            <div class="chart-wrap"><svg id="chart-temp" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                            <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌡️ 気温 (°C)</p>
+                            <div class="chart-wrap"><svg id="chart-temp" width="100%" height="55" viewBox="0 0 300 55" preserveAspectRatio="none"></svg></div>
                         </div>
-                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">💧 湿度 (%)</p>
-                            <div class="chart-wrap"><svg id="chart-humid" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                        <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                            <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">💧 湿度 (%)</p>
+                            <div class="chart-wrap"><svg id="chart-humid" width="100%" height="55" viewBox="0 0 300 55" preserveAspectRatio="none"></svg></div>
                         </div>
-                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">☀️ 光量 (lx)</p>
-                            <div class="chart-wrap"><svg id="chart-light" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                        <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                            <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">☀️ 光量 (lx)</p>
+                            <div class="chart-wrap"><svg id="chart-light" width="100%" height="55" viewBox="0 0 300 55" preserveAspectRatio="none"></svg></div>
                         </div>
-                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">🌱 成長率 / ダメージ</p>
-                            <div class="chart-wrap"><svg id="chart-growth" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                        <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                            <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌱 成長率 / ダメージ</p>
+                            <div class="chart-wrap"><svg id="chart-growth" width="100%" height="55" viewBox="0 0 300 55" preserveAspectRatio="none"></svg></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- 自動タブ -->
                 <div id="panel-auto" style="display:none">
-                    <div class="grid grid-cols-12 gap-4">
-                        <div class="col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200 block-container">
+                    <div class="grid grid-cols-12 gap-3">
+                        <div class="col-span-5 bg-slate-50 p-3 rounded-xl border border-slate-200 block-container">
                             <p class="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Code Blocks</p>
                             
                             <!-- 条件ブロック -->
@@ -496,7 +496,7 @@
                         </div>
 
                         <div class="col-span-7">
-                            <div id="workspace" class="drop-zone p-4 overflow-auto max-h-[500px] font-mono"></div>
+                            <div id="workspace" class="drop-zone p-3 overflow-auto max-h-[380px] font-mono"></div>
                             <p class="text-[10px] text-slate-400 mt-2">※ブロックをドラッグして条件を組み立ててください。</p>
                         </div>
                     </div>
@@ -814,7 +814,7 @@
         function drawChart(svgId, values, color, min, max, values2, color2) {
             const svg = document.getElementById(svgId);
             if (!svg || values.length < 2) return;
-            const W = 300, H = 80, PAD = 4;
+            const W = 300, H = 55, PAD = 4;
             const n = values.length;
             const range = max - min || 1;
             const pts = (arr) => arr.map((v, i) => {
