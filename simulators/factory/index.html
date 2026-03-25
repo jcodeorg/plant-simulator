@@ -442,6 +442,7 @@
                                         <option value="temp">temp</option>
                                         <option value="ec">ec</option>
                                         <option value="hour">hour</option>
+                                        <option value="day">day</option>
                                     </select>
                                     <select class="block-input operator-select">
                                         <option value="lt">&lt;</option>
@@ -601,7 +602,8 @@
             stageName: '発芽期',    // 現在の成長ステージ名
             stressBreakdown: { env: 0, water: 0, etiol: 0, tipburn: 0, recovery: 0.001, net: 0 },
             simFinished: false,     // シミュレーション終了フラグ
-            lastTick: Date.now()
+            lastTick: Date.now(),
+            day: 1,                 // 経過日数
         };
 
         // シミュレーション統計情報
@@ -695,6 +697,7 @@
                     if (sensorType === 'temp')  currentValue = state.temp;
                     if (sensorType === 'ec')    currentValue = state.ec;
                     if (sensorType === 'hour')  currentValue = state.hour;
+                    if (sensorType === 'day')   currentValue = state.day;  // 経過日数
 
                     let condition = false;
                     if (operator === 'lt') condition = currentValue < targetValue;
@@ -871,6 +874,7 @@
                     state.temp  = w.temp;
                     state.humid = w.humidity;
                     state.sunLux = w.lux; // 太陽光（Lx）
+                    state.day   = w.day;  // 経過日数
 
                     // EC の自然減少
                     state.ec = Math.max(0, state.ec - 0.001);
@@ -953,6 +957,7 @@
                 state.humid  = dw.humidity;
                 state.sunLux = dw.lux;
                 state.hour   = dw.hour;
+                state.day    = dw.day;  // 経過日数
                 // state.ledActive はシミュレーションステップ・手動操作のみが変更する
                 // 描画フレームでは上書きしない
                 state.light = state.sunLux + (state.ledActive ? state.ledLux : 0);
@@ -1371,10 +1376,10 @@
             const m = parseInt(month);
             // 月ごとのデフォルト太陽設定
             const monthDefaults = {
-                1:  { sunrise: 7, sunset: 17, peakLux:  9000 }, // 冬
-                4:  { sunrise: 6, sunset: 18, peakLux: 50000 }, // 春
-                7:  { sunrise: 5, sunset: 19, peakLux: 20000 }, // 夏
-                10: { sunrise: 6, sunset: 17, peakLux: 12000 }, // 秋
+                1:  { sunrise: 7, sunset: 17, peakLux: 4000 }, // 冬
+                4:  { sunrise: 6, sunset: 18, peakLux: 5000 }, // 春
+                7:  { sunrise: 5, sunset: 19, peakLux: 6000 }, // 夏
+                10: { sunrise: 6, sunset: 17, peakLux: 5000 }, // 秋
             };
             const defaults = monthDefaults[m] || monthDefaults[4];
 

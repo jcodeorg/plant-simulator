@@ -113,8 +113,11 @@ class PlantSimulator {
         // isDaytime は step 2 先頭で確定済み
         const lightThreshold = 8000;
 
+        // 発芽期は暗所発芽が基本のため徒長しない
+        const isGerminating = this.state.growth < 0.10;
+
         // 「昼間の光不足」または「エネルギー不足の夜」に進行
-        if ((isDaytime && l < lightThreshold) || (!isDaytime && this.state.isLightDeficit)) {
+        if (!isGerminating && ((isDaytime && l < lightThreshold) || (!isDaytime && this.state.isLightDeficit))) {
             // console.log(hour, isDaytime, l < lightThreshold, this.state.isLightDeficit);
             const deficit = isDaytime ? (lightThreshold - l) / lightThreshold : 0.5;
             const tFactor = t > 22 ? (t - 22) * 0.1 + 1 : 1;
