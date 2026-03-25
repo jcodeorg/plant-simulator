@@ -318,13 +318,14 @@
                 <!-- ヘッダー: タブ -->
                 <div class="flex items-center mb-2">
                     <div class="flex gap-2">
-                        <button id="tab-manual" class="tab-btn active" onclick="switchTab('manual')">&#128075; 手動</button>
-                        <button id="tab-auto"   class="tab-btn inactive" onclick="switchTab('auto')">&#129520; 自動</button>
+                        <button id="tab-info"  class="tab-btn active"   onclick="switchTab('info')">&#128202; 情報</button>
+                        <button id="tab-chart" class="tab-btn inactive" onclick="switchTab('chart')">&#128200; チャート</button>
+                        <button id="tab-code"  class="tab-btn inactive" onclick="switchTab('code')">&#129520; コード</button>
                     </div>
                 </div>
 
-                <!-- 手動タブ -->
-                <div id="panel-manual" class="overflow-y-auto" style="max-height:calc(100vh - 5.5rem)">
+                <!-- 情報タブ -->
+                <div id="panel-info" class="overflow-y-auto" style="max-height:calc(100vh - 5.5rem)">
                     <!-- 環境センサー 1×4 -->
                     <div class="grid grid-cols-4 gap-2 mb-2">
                         <div class="bg-blue-50 p-1.5 rounded-lg border border-blue-100">
@@ -409,7 +410,10 @@
                         <div id="stress-breakdown" class="space-y-1.5"></div>
                     </div>
 
-                    <!-- グラフエリア -->
+                </div>
+
+                <!-- チャートタブ -->
+                <div id="panel-chart" class="overflow-y-auto" style="display:none; max-height:calc(100vh - 5.5rem)">
                     <div class="grid grid-cols-2 gap-2">
                         <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
                             <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌡️ 気温 (°C)</p>
@@ -430,8 +434,8 @@
                     </div>
                 </div>
 
-                <!-- 自動タブ -->
-                <div id="panel-auto" style="display:none">
+                <!-- コードタブ -->
+                <div id="panel-code" style="display:none">
                     <div class="grid grid-cols-12 gap-3">
                         <div class="col-span-5 bg-slate-50 p-3 rounded-xl border border-slate-200 block-container">
                             <p class="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Code Blocks</p>
@@ -784,11 +788,10 @@
 
         // --- タブ切り替え ---
         function switchTab(tab) {
-            const isManual = tab === 'manual';
-            document.getElementById('panel-manual').style.display = isManual ? '' : 'none';
-            document.getElementById('panel-auto').style.display   = isManual ? 'none' : '';
-            document.getElementById('tab-manual').className = 'tab-btn ' + (isManual ? 'active' : 'inactive');
-            document.getElementById('tab-auto').className   = 'tab-btn ' + (isManual ? 'inactive' : 'active');
+            ['info', 'chart', 'code'].forEach(t => {
+                document.getElementById('panel-' + t).style.display = t === tab ? '' : 'none';
+                document.getElementById('tab-' + t).className = 'tab-btn ' + (t === tab ? 'active' : 'inactive');
+            });
         }
 
         // --- グラフ描画 ---
