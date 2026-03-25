@@ -273,17 +273,29 @@
             <!-- シミュレーション速度制御 -->
             <div class="bg-white p-4 rounded-2xl shadow-lg border border-slate-200">
                 <div class="flex items-center justify-between mb-2">
-                    <h3 class="font-bold text-slate-700 text-sm">⏱ シミュレーション速度</h3>
+                    <h3 class="font-bold text-slate-700 text-sm">⏱ シミュレーション制御</h3>
                     <span id="sim-clock" class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">Day 1 - 00:00</span>
                 </div>
+                <!-- 開始 / 一時停止・再開ボタン -->
+                <div class="flex gap-2 mb-3">
+                    <button id="btn-start" onclick="startSim()"
+                            class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-full text-sm transition">
+                        ▶︎ 開始
+                    </button>
+                    <button id="btn-pause" onclick="togglePause()" disabled
+                            class="flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed">
+                        ⏸ 一時停止
+                    </button>
+                </div>
+                <!-- 速度スライダー -->
                 <div class="flex items-center gap-3">
-                    <span class="text-xs text-slate-400 shrink-0">停止</span>
-                    <input type="range" id="speed-slider" min="0" max="100" value="0"
+                    <span class="text-xs text-slate-400 shrink-0">1h/s</span>
+                    <input type="range" id="speed-slider" min="1" max="6" step="0.5" value="1"
                            class="flex-1 accent-emerald-500" oninput="updateSpeed(this.value)">
-                    <span class="text-xs text-slate-400 shrink-0">最高速</span>
+                    <span class="text-xs text-slate-400 shrink-0">6h/s</span>
                 </div>
                 <div class="flex items-center justify-between mt-1">
-                    <span class="text-xs text-slate-500" id="speed-label">停止中</span>
+                    <span class="text-xs text-slate-500" id="speed-label">1秒 = 1時間</span>
                     <div class="flex items-center gap-2">
                         <span class="text-xs text-slate-500">月:</span>
                         <select id="month-select" onchange="changeMonth(this.value)"
@@ -460,6 +472,14 @@
                     <p class="text-2xl font-bold text-sky-700" id="res-days">-</p>
                 </div>
             </div>
+            <!-- 電気代 -->
+            <div class="bg-yellow-50 rounded-xl p-3 border border-yellow-200 mb-3 flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] text-yellow-700 font-bold uppercase">⚡ LED電気代</p>
+                    <p class="text-[10px] text-yellow-500 mt-0.5" id="res-electric-detail">-</p>
+                </div>
+                <p class="text-2xl font-bold text-yellow-700" id="res-electric">-</p>
+            </div>
             <!-- 詳細ステータス -->
             <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 mb-3">
                 <p class="text-[10px] text-slate-500 font-bold uppercase mb-2">📊 詳細ステータス</p>
@@ -499,7 +519,8 @@
         let weatherData  = [];  // generateMonthData() の結果 (45日×24時間)
         let weatherIndex = 0;   // 現在の時間インデックス
         let simAccum     = 0;   // 蓄積経過（シミュレーション時間・時間単位）
-        let simSpeed     = 0;   // 速度: 単位は時間/実秒 (0=停止, 最大6=6時間/実秒)
+        let simSpeed     = 1;    // 速度: 単位は時間/実秒 (1〜6)
+        let simPaused    = true; // true=停止中 / false=実行中
 
         let state = {
             temp: 22.0,
@@ -735,7 +756,7 @@
             const realDt = Math.min((now - state.lastTick) / 1000, 0.1);
             state.lastTick = now;
 
-            if (simSpeed > 0 && weatherData.length > 0 && !state.simFinished) {
+            if (!simPaused && weatherData.length > 0 && !state.simFinished) {
                 simAccum += realDt * simSpeed;
 
                 while (simAccum >= 1.0) {
@@ -980,25 +1001,51 @@
         }
 
         // --- 速度・天候制御 ---
-        function updateSpeed(val) {
-            // スライダー 0〜100 を 0〜6 時間/実秒 にマッピング
-            simSpeed = (val / 100) * 6;
-            const label = document.getElementById('speed-label');
-            if (val == 0) {
-                label.textContent = '停止中';
-            } else if (simSpeed < 1) {
-                const secPerHour = (1 / simSpeed).toFixed(1);
-                label.textContent = `1時間 = ${secPerHour}秒`;
+        function startSim() {
+            if (state.simFinished) return;
+            simPaused = false;
+            const startBtn = document.getElementById('btn-start');
+            startBtn.disabled = true;
+            startBtn.className = 'flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed';
+            startBtn.textContent = '▶︎ 開始';
+            const pauseBtn = document.getElementById('btn-pause');
+            pauseBtn.disabled = false;
+            pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
+            pauseBtn.textContent = '⏸ 一時停止';
+            addLog('シミュレーション開始。', 'success');
+        }
+
+        function togglePause() {
+            if (state.simFinished) return;
+            simPaused = !simPaused;
+            const pauseBtn = document.getElementById('btn-pause');
+            if (simPaused) {
+                pauseBtn.textContent = '▶ 再開';
+                pauseBtn.className = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
+                addLog('一時停止。', 'info');
             } else {
-                label.textContent = `1秒 = ${simSpeed.toFixed(1)}時間`;
+                pauseBtn.textContent = '⏸ 一時停止';
+                pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
+                addLog('再開。', 'info');
             }
+        }
+
+        function updateSpeed(val) {
+            simSpeed = parseFloat(val);
+            const label = document.getElementById('speed-label');
+            label.textContent = simSpeed === 1 ? '1秒 = 1時間' : `1秒 = ${simSpeed}時間`;
         }
 
         function showResult(outcome, endDay) {
             state.simFinished = true;
-            simSpeed = 0;
-            document.getElementById('speed-slider').value = 0;
-            document.getElementById('speed-label').textContent = '停止中';
+            simPaused = true;
+            // ボタンを終了状態に
+            const pauseBtn = document.getElementById('btn-pause');
+            if (pauseBtn) {
+                pauseBtn.disabled = true;
+                pauseBtn.className = 'flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed';
+                pauseBtn.textContent = '⏸ 一時停止';
+            }
 
             const icons    = { harvested: '🥬', died: '🍂', completed: '📊' };
             const titles   = { harvested: '収穫完了！', died: '椒れてしまいました', completed: 'シミュレーション終了' };
@@ -1022,6 +1069,14 @@
                 ? Math.round(simStats.ledOnHours / simStats.totalHours * 100) : 0;
             document.getElementById('res-ledpct').textContent   = `${ledPct}%`;
             document.getElementById('res-stage').textContent    = state.stageName;
+
+            // 電気代計算: LED 8000lx 点灯 1時間 = 2.4円
+            const LED_COST_PER_HOUR = 2.4;
+            const electricCost = (simStats.ledOnHours * LED_COST_PER_HOUR).toFixed(0);
+            const resElecEl = document.getElementById('res-electric');
+            if (resElecEl) resElecEl.textContent = `¥${Number(electricCost).toLocaleString()}円`;
+            const resElecDetailEl = document.getElementById('res-electric-detail');
+            if (resElecDetailEl) resElecDetailEl.textContent = `LED ${simStats.ledOnHours}時間点灯 × 2.4円/h`;
 
             // 分析コメント生成
             const comments = [];
@@ -1093,6 +1148,18 @@
             // モーダルを閉じる
             document.getElementById('result-modal').classList.add('hidden');
 
+            // ボタンを初期化
+            const startBtn = document.getElementById('btn-start');
+            startBtn.disabled = false;
+            startBtn.classList.replace('bg-slate-300','bg-emerald-500');
+            startBtn.classList.add('hover:bg-emerald-600','text-white');
+            startBtn.classList.remove('text-slate-500','cursor-not-allowed');
+            const pauseBtn = document.getElementById('btn-pause');
+            pauseBtn.disabled = true;
+            pauseBtn.className = 'flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed';
+            pauseBtn.textContent = '⏸ 一時停止';
+
+            simPaused = true;
             state.simFinished = false;
             simStats = { maxGrowth: 0, ledOnHours: 0, totalHours: 0 };
             state.temp   = 22.0;
