@@ -620,12 +620,16 @@
         const STAGE_OPT_TEMP  = [22,  20,   20,   18  ];  // 最適温度 (°C)
         const STAGE_NAMES     = ['発芽期', '幼苗期', '生育期', '成熟期'];
 
-        // 太陽設定（UIで変更可）
-        let sunSettings = {
-            sunrise: 6,
-            sunset: 18,
-            peakLux: 5000
+        // 月ごとのデフォルト太陽設定（changeMonth・起動時・sunSettings初期化で共有）
+        const MONTH_DEFAULTS = {
+            1:  { sunrise: 7, sunset: 17, peakLux: 4000 }, // 冬
+            4:  { sunrise: 6, sunset: 18, peakLux: 50000 }, // 春（屋外）
+            7:  { sunrise: 5, sunset: 19, peakLux: 6000 }, // 夏
+            10: { sunrise: 6, sunset: 17, peakLux: 5000 }, // 秋
         };
+
+        // 太陽設定（UIで変更可）— 初期値は4月のデフォルトから生成
+        let sunSettings = { ...MONTH_DEFAULTS[4] };
 
         // --- ロギング ---
         function addLog(msg, type = 'info') {
@@ -1374,14 +1378,7 @@
 
         function changeMonth(month) {
             const m = parseInt(month);
-            // 月ごとのデフォルト太陽設定
-            const monthDefaults = {
-                1:  { sunrise: 7, sunset: 17, peakLux: 4000 }, // 冬
-                4:  { sunrise: 6, sunset: 18, peakLux: 5000 }, // 春
-                7:  { sunrise: 5, sunset: 19, peakLux: 6000 }, // 夏
-                10: { sunrise: 6, sunset: 17, peakLux: 5000 }, // 秋
-            };
-            const defaults = monthDefaults[m] || monthDefaults[4];
+            const defaults = MONTH_DEFAULTS[m] || MONTH_DEFAULTS[4];
 
             // sunSettings を月のデフォルト値で上書き
             sunSettings.sunrise = defaults.sunrise;
@@ -1490,7 +1487,7 @@
         }
 
         window.onload = () => {
-            // 初期UI値を sunSettings に合わせる
+            // 初期UI値を sunSettings（4月デフォルト）に合わせる
             document.getElementById('sunrise-input').value = sunSettings.sunrise;
             document.getElementById('sunset-input').value  = sunSettings.sunset;
             document.getElementById('peak-input').value    = sunSettings.peakLux;
