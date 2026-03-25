@@ -290,9 +290,9 @@
                 <!-- 速度スライダー -->
                 <div class="flex items-center gap-3">
                     <span class="text-xs text-slate-400 shrink-0">1h/s</span>
-                    <input type="range" id="speed-slider" min="1" max="6" step="0.5" value="1"
+                    <input type="range" id="speed-slider" min="1" max="24" step="1" value="1"
                            class="flex-1 accent-emerald-500" oninput="updateSpeed(this.value)">
-                    <span class="text-xs text-slate-400 shrink-0">6h/s</span>
+                    <span class="text-xs text-slate-400 shrink-0">1日/s</span>
                 </div>
                 <div class="flex items-center justify-between mt-1">
                     <span class="text-xs text-slate-500" id="speed-label">1秒 = 1時間</span>
@@ -519,7 +519,7 @@
         let weatherData  = [];  // generateMonthData() の結果 (45日×24時間)
         let weatherIndex = 0;   // 現在の時間インデックス
         let simAccum     = 0;   // 蓄積経過（シミュレーション時間・時間単位）
-        let simSpeed     = 1;    // 速度: 単位は時間/実秒 (1〜6)
+        let simSpeed     = 1;    // 速度: 単位は時間/実秒 (1〜24)
         let simPaused    = true; // true=停止中 / false=実行中
 
         let state = {
@@ -1033,7 +1033,11 @@
         function updateSpeed(val) {
             simSpeed = parseFloat(val);
             const label = document.getElementById('speed-label');
-            label.textContent = simSpeed === 1 ? '1秒 = 1時間' : `1秒 = ${simSpeed}時間`;
+            if (simSpeed < 24) {
+                label.textContent = simSpeed === 1 ? '1秒 = 1時間' : `1秒 = ${simSpeed}時間`;
+            } else {
+                label.textContent = '1秒 = 1日 (最高速)';
+            }
         }
 
         function showResult(outcome, endDay) {
