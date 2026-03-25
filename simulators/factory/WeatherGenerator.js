@@ -10,9 +10,24 @@ class WeatherGenerator {
         };
     }
 
-    generateMonthData(month) {
+    /**
+     * generateMonthData(month, opts)
+     * opts: { sunrise, sunset, peakLux }
+     */
+    generateMonthData(month, opts = {}) {
         const stats = this.tokyoStats[month] || this.tokyoStats[4]; // デフォルトは4月
         const data = [];
+
+        // 月ごとの日照ピーク（簡易モデル）
+        const peakMap = {
+            1:  30000,
+            4:  45000,
+            7:  80000,
+            10: 50000
+        };
+        const peakLux = opts.peakLux || peakMap[month] || 45000;
+        const sunrise = (typeof opts.sunrise === 'number') ? opts.sunrise : 6;
+        const sunset  = (typeof opts.sunset === 'number')  ? opts.sunset  : 18;
 
         for (let day = 1; day <= 30; day++) {
             for (let hour = 0; hour < 24; hour++) {
@@ -23,10 +38,17 @@ class WeatherGenerator {
                 // 2. 湿度の計算 (気温が高いと低くなる)
                 const humid = stats.hum - (timeDiff * 10) + (Math.random() * 5);
 
-                // 3. 明るさ (LEDライト設定: 7:00 - 21:00 は 15000Lx, それ以外は 0)
+                // 3. 明るさ: 太陽光を正弦波で簡易シミュレート
                 let lux = 0;
-                if (hour >= 7 && hour <= 21) {
-                    lux = 15000; 
+                if (sunrise < sunset && hour >= sunrise && hour <= sunset) {
+                    const dayProgress = (hour - sunrise) / (sunset - sunrise); // 0..1
+                    const sunFactor = Math.sin(dayProgress * Math.PI); // 峰は正午
+                    // 乱雲効果 (0.5 ~ 1.0)
+                    const cloud = 0.5 + Math.random() * 0.5;
+                    lux = Math.round(peakLux * sunFactor * cloud);
+                } else {
+                    // 夜間の残光を少しだけ（街灯や室内照明の影響）
+                    lux = Math.round(Math.random() * 50);
                 }
 
                 data.push({

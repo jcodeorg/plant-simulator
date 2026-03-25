@@ -232,6 +232,20 @@
                         </select>
                     </div>
                 </div>
+                <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
+                    <div class="flex flex-col">
+                        <label class="text-slate-500">日の出 (hour)</label>
+                        <input id="sunrise-input" type="number" min="0" max="23" value="6" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-slate-500">日の入り (hour)</label>
+                        <input id="sunset-input" type="number" min="0" max="23" value="18" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-slate-500">ピーク照度 (lux)</label>
+                        <input id="peak-input" type="number" min="0" step="100" value="45000" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()">
+                    </div>
+                </div>
             </div>
 
             <div class="bg-slate-900 text-green-400 p-4 rounded-xl shadow-inner border border-slate-700">
@@ -321,6 +335,7 @@
             temp: 22.0,
             ec: 1.2,
             light: 0,
+            sunLux: 0,
             growth: 0,
             humid: 55.0,
             damage: 0,
@@ -328,6 +343,13 @@
             ledActive: false,
             isProgramRunning: false,
             lastTick: Date.now()
+        };
+
+        // 太陽設定（UIで変更可）
+        let sunSettings = {
+            sunrise: 6,
+            sunset: 18,
+            peakLux: 45000
         };
 
         // --- ロギング ---
@@ -443,9 +465,9 @@
                     const w = weatherData[weatherIndex];
 
                     // 天候データから環境値を設定
-                    state.temp     = w.temp;
-                    state.humid    = w.humidity;
-                    state.ledActive = w.lux > 0; // デフォルトはスケジュール通り
+                    state.temp  = w.temp;
+                    state.humid = w.humidity;
+                    state.sunLux = w.lux; // 太陽光（Lx）
 
                     // EC の自然減少
                     state.ec = Math.max(0, state.ec - 0.001);
@@ -456,8 +478,8 @@
                         executeBlockList(rootBlocks);
                     }
 
-                    // ledActive に基づいて光量を決定
-                    state.light = state.ledActive ? 15000 : 0;
+                    // 総合光量は太陽光 + LED
+                    state.light = state.sunLux + (state.ledActive ? 15000 : 0);
 
                     // 水位が極端に低い場合の緊急補水
                     if (lettuce.state.waterLevel < -4.0) {
@@ -496,13 +518,12 @@
             if (weatherData.length > 0) {
                 const di = Math.min(weatherIndex, weatherData.length - 1);
                 const dw = weatherData[di];
-                state.temp  = dw.temp;
-                state.humid = dw.humidity;
-                // ユーザーの制御ブロックが動いていない場合のみ天候スケジュールでLEDを制御
-                if (!state.isProgramRunning) {
-                    state.ledActive = dw.lux > 0;
-                    state.light     = state.ledActive ? 15000 : 0;
-                }
+                state.temp   = dw.temp;
+                state.humid  = dw.humidity;
+                state.sunLux = dw.lux;
+                // 制御ブロックが停止中なら天候スケジュールでLEDを反映
+                if (!state.isProgramRunning) state.ledActive = dw.lux > 0;
+                state.light = state.sunLux + (state.ledActive ? 15000 : 0);
             }
 
             render();
@@ -583,7 +604,7 @@
 
         function changeMonth(month) {
             const m = parseInt(month);
-            weatherData  = weather.generateMonthData(m);
+            weatherData  = weather.generateMonthData(m, sunSettings);
             weatherIndex = 0;
             simAccum     = 0;
             lettuce.state.growth     = 0;
@@ -592,14 +613,32 @@
             state.growth     = 0;
             state.damage     = 0;
             state.waterLevel = 0;
+            state.sunLux = 0;
             document.getElementById('sim-clock').textContent = 'Day 1 - 00:00';
             addLog(`${m}月のデータで再起動しました。`, "success");
         }
 
         function initWeather(month) {
-            weatherData  = weather.generateMonthData(month);
+            weatherData  = weather.generateMonthData(month, sunSettings);
             weatherIndex = 0;
             simAccum     = 0;
+        }
+
+        function updateSunSettings() {
+            const sr = parseInt(document.getElementById('sunrise-input').value, 10);
+            const ss = parseInt(document.getElementById('sunset-input').value, 10);
+            const pk = parseInt(document.getElementById('peak-input').value, 10);
+            sunSettings.sunrise = Math.max(0, Math.min(23, isNaN(sr) ? sunSettings.sunrise : sr));
+            sunSettings.sunset  = Math.max(0, Math.min(23, isNaN(ss) ? sunSettings.sunset : ss));
+            sunSettings.peakLux = Math.max(0, isNaN(pk) ? sunSettings.peakLux : pk);
+
+            // 再生成（現在の月を保持）
+            const monthSel = document.getElementById('month-select');
+            const m = parseInt(monthSel.value || 4, 10);
+            weatherData = weather.generateMonthData(m, sunSettings);
+            weatherIndex = 0;
+            simAccum = 0;
+            addLog(`太陽設定を更新: 日の出 ${sunSettings.sunrise} / 日の入り ${sunSettings.sunset} / ピーク ${sunSettings.peakLux} lx`, "info");
         }
 
         function resetSim() {
@@ -615,11 +654,17 @@
             lettuce.state.waterLevel = 0;
             weatherIndex = 0;
             simAccum     = 0;
+            state.sunLux = 0;
             document.getElementById('sim-clock').textContent = 'Day 1 - 00:00';
             addLog("System parameters reset.");
         }
 
         window.onload = () => {
+            // 初期UI値を sunSettings に合わせる
+            document.getElementById('sunrise-input').value = sunSettings.sunrise;
+            document.getElementById('sunset-input').value  = sunSettings.sunset;
+            document.getElementById('peak-input').value    = sunSettings.peakLux;
+
             initWeather(4);
             addLog("Smart Farm OS initialized.");
             addLog("PlantSimulator (サニーレタス) 読み込み完了。", "success");
