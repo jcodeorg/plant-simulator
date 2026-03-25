@@ -268,6 +268,15 @@
                         <p class="text-lg font-bold text-slate-700"><span id="sensor-water">0.00</span> cm</p>
                     </div>
                 </div>
+                <!-- エネルギー蓄積バー -->
+                <div class="mt-2 bg-lime-50 border border-lime-200 rounded-lg px-3 py-2 flex items-center gap-3">
+                    <span class="text-[10px] font-bold text-lime-700 shrink-0">⚡ エネルギー蓄積</span>
+                    <div class="flex-1 bg-lime-200 rounded-full h-2">
+                        <div id="storage-bar" class="bg-lime-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                    <span id="storage-val" class="text-[10px] font-mono text-lime-800 shrink-0 w-[36px] text-right">0%</span>
+                    <span id="storage-status" class="text-[10px] font-bold shrink-0"></span>
+                </div>
 
                 <!-- ダメージ原因内訳 -->
                 <div class="mt-2 bg-white border border-slate-200 rounded-xl p-3">
@@ -1028,6 +1037,29 @@
             document.getElementById('etiolation-bar').style.width = `${(state.etiolation * 100).toFixed(1)}%`;
             document.getElementById('sensor-water').innerText = state.waterLevel.toFixed(2);
 
+            // --- エネルギー蓄積バー ---
+            const storageBar = document.getElementById('storage-bar');
+            const storageVal = document.getElementById('storage-val');
+            const storageStatus = document.getElementById('storage-status');
+            if (storageBar && storageVal && storageStatus) {
+                const sDLI = lettuce.state.storageDLI;
+                storageBar.style.width = `${(sDLI * 100).toFixed(0)}%`;
+                storageVal.textContent = `${(sDLI * 100).toFixed(0)}%`;
+                if (sDLI > 0.5) {
+                    storageBar.className = 'bg-orange-500 h-2 rounded-full transition-all';
+                    storageStatus.textContent = '⚠️ 飽和';
+                    storageStatus.className = 'text-[10px] font-bold shrink-0 text-orange-600';
+                } else if (sDLI > 0.1) {
+                    storageBar.className = 'bg-lime-500 h-2 rounded-full transition-all';
+                    storageStatus.textContent = '✅ 適準';
+                    storageStatus.className = 'text-[10px] font-bold shrink-0 text-lime-600';
+                } else {
+                    storageBar.className = 'bg-slate-300 h-2 rounded-full transition-all';
+                    storageStatus.textContent = '🌙 不足';
+                    storageStatus.className = 'text-[10px] font-bold shrink-0 text-slate-400';
+                }
+            }
+
             // --- ダメージ原因内訳 ---
             const sb = state.stressBreakdown;
             const sbEl = document.getElementById('stress-breakdown');
@@ -1064,6 +1096,21 @@
                     mkRow('💧', '水分不足',   sb.water,   stressCumul.water,   'bg-blue-400',   '水位が下がりすぎると蓄積し、水切れは致命的') +
                     mkRow('🌿', '徒長',       sb.etiol,   stressCumul.etiol,   'bg-yellow-500', '光量不足で茎が徒長すると品質が低下') +
                     mkRow('🍂', 'チップバーン', sb.tipburn, stressCumul.tipburn, 'bg-red-400',    '高光・高温時にカルシウム不足で発生') +
+                    (() => {
+                        const sDLI = lettuce.state.storageDLI;
+                        const pct  = (sDLI * 100).toFixed(0);
+                        const saturated = sDLI > 0.5;
+                        const barCls = saturated ? 'bg-orange-400' : sDLI > 0.1 ? 'bg-lime-500' : 'bg-slate-300';
+                        const statusLabel = saturated ? '⚠️ 飽和' : sDLI > 0.1 ? '✅ 蓄積中' : '🌙 消費中';
+                        const valColor = saturated ? 'text-orange-600 font-semibold' : 'text-lime-700';
+                        return `<div class="flex items-center gap-1.5" title="デンプン蓄積量。0.5超で光合成阻害＋チップバーン増加のリスク">` +
+                            `<span class="text-base w-5 text-center shrink-0">⚡</span>` +
+                            `<span class="text-[10px] w-[60px] text-slate-600 shrink-0">エネルギー</span>` +
+                            `<div class="flex-1 bg-slate-100 rounded-full h-1.5"><div class="h-1.5 rounded-full ${barCls} transition-all" style="width:${pct}%"></div></div>` +
+                            `<span class="text-[10px] font-mono w-[52px] text-right shrink-0 ${valColor}">${pct}%</span>` +
+                            `<span class="text-[10px] font-mono w-[58px] text-right shrink-0 text-slate-400">${statusLabel}</span>` +
+                        `</div>`;
+                    })() +
                     `<div class="flex items-center gap-1.5 mt-1 pt-1 border-t border-slate-100">` +
                         `<span class="text-base w-5 text-center shrink-0">💚</span>` +
                         `<span class="text-[10px] w-[60px] text-emerald-600 shrink-0">自然回復</span>` +
@@ -1381,6 +1428,7 @@
             lettuce.state.damage     = 0;
             lettuce.state.waterLevel = 0;
             lettuce.state.etiolation = 0;
+            lettuce.state.storageDLI = 0;
             weatherIndex = 0;
             simAccum     = 0;
             state.sunLux = 0;

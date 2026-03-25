@@ -27,7 +27,8 @@ class PlantSimulator {
             tipburn: 0.0,       // チップバーン度
             dailyLightSum: 0,   // 当日の積算光量
             isLightDeficit: false, // 前日の光不足フラグ
-            isDay: false        // 昼間フラグ (l>50で立ち、l<50で倒れる。0時にリセット)
+            isDay: false,       // 昼間フラグ (l>50で立ち、l<50で倒れる。0時にリセット)
+            storageDLI: 0.0     // 光合成エネルギー蓄積量 (昇淯上限 1.0)
         };
     }
 
@@ -68,6 +69,11 @@ class PlantSimulator {
         this.state.waterLevel -= (evap + trans) * dt;
 
         // --- 2. 成長因子の計算 ---
+        // 昼間フラグを先に確定（エネルギーモデルで必要）
+        if (l > 50) this.state.isDay = true;
+        if (l < 50) this.state.isDay = false;
+        const isDaytime = this.state.isDay;
+
         const fL = l / (l + sp.kl);
         const fT = Math.exp(-Math.pow(t - sp.optTemp, 2) / (2 * sp.tempW * sp.tempW));
         
@@ -77,16 +83,33 @@ class PlantSimulator {
         
         const iW = Math.exp(-this.config.kw * Math.pow(this.state.waterLevel, 2)); // 水位応答
 
-        // 成長増分
-        const deltaG = sp.baseSpeed * fL * fT * fVPD * iW * dt;
+        // --- エネルギー蓄積・変換モデル ---
+        let deltaG = 0;
+        if (isDaytime) {
+            // 昼間: 光合成でエネルギーを蓄める
+            this.state.storageDLI = Math.min(1.0, this.state.storageDLI + fL * fT * dt);
+
+            // デンプン飽和チェック: 蓄積耙が上限近くになれば光合成が阀害
+            let satDebuff = 1.0;
+            if (this.state.storageDLI > 0.5) {
+                satDebuff = 0.5;
+                // デンプン飽和による生理障害（チップバーンリスク上昇）
+                this.state.tipburn = Math.min(1.0, this.state.tipburn + 0.01 * dt);
+            }
+            deltaG = sp.baseSpeed * fL * fT * fVPD * iW * satDebuff * dt;
+        } else {
+            // 夜間: 蓄積エネルギーを成長に変換
+            const conversionRate = 0.1 * fT; // 夜間温度が良いほど変換効率アップ
+            const cost = Math.min(this.state.storageDLI, 0.05 * dt);
+            deltaG = cost * conversionRate;
+            this.state.storageDLI = Math.max(0, this.state.storageDLI - cost);
+        }
+
         this.state.growth = Math.min(1.0, this.state.growth + Math.max(0, deltaG));
 
         // --- 3. 徒長 (Etiolation) ---
         let etiolStep = 0;
-        // 昼間フラグを光量の遷移で更新 (l>50 で昼間開始、l<50 で夜間に戻る)
-        if (l > 50)  this.state.isDay = true;
-        if (l < 50)  this.state.isDay = false;
-        const isDaytime = this.state.isDay;
+        // isDaytime は step 2 先頭で確定済み
         const lightThreshold = 8000;
 
         // 「昼間の光不足」または「エネルギー不足の夜」に進行
