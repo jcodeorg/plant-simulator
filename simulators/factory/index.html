@@ -142,7 +142,9 @@
 
         .log-panel { font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; }
         .slot-highlight { background-color: rgba(255, 255, 255, 0.5) !important; border: 1px solid white !important; }
-        .py-keyword { color: #f8fafc; font-family: monospace; font-weight: bold; }
+        /* グラフ */
+        .chart-wrap { position: relative; width: 100%; }
+        .chart-label { font-size: 10px; fill: #94a3b8; }
 
         /* タブ */
         .tab-btn { padding: 6px 18px; border-radius: 9999px; font-size: 13px; font-weight: 700;
@@ -156,9 +158,12 @@
                       gap: 2px; padding: 10px 0; border-radius: 12px; border: 2px solid;
                       font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; width: 100%; }
 
-        /* グラフ */
-        .chart-wrap { position: relative; width: 100%; }
-        .chart-label { font-size: 10px; fill: #94a3b8; }
+        /* 光量オーバーレイ */
+        #light-overlay {
+            position: absolute; inset: 0; z-index: 0;
+            pointer-events: none;
+            transition: background 0.8s;
+        }
     </style>
 </head>
 <body class="p-4 bg-slate-100">
@@ -175,6 +180,7 @@
                 </div>
                 
                 <div class="showcase" id="main-showcase">
+                    <div id="light-overlay"></div>
                     <div id="led-top" class="led-strip" style="top: 5px;"></div>
                     <div class="shelf"><div class="water-layer" id="water-1"></div><div class="plant-unit" id="p1">🌱</div></div>
                     <div class="shelf"><div class="water-layer" id="water-2"></div><div class="plant-unit" id="p2">🌱</div></div>
@@ -259,7 +265,7 @@
                     </div>
                     <div class="flex flex-col">
                         <label class="text-slate-500">ピーク照度 (lux)</label>
-                        <input id="peak-input" type="number" min="0" step="100" value="45000" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()">
+                        <input id="peak-input" type="number" min="0" step="100" value="5000" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()">
                     </div>
                 </div>
             </div>
@@ -417,7 +423,7 @@
         let sunSettings = {
             sunrise: 6,
             sunset: 18,
-            peakLux: 45000
+            peakLux: 5000
         };
 
         // --- ロギング ---
@@ -543,7 +549,8 @@
         }
 
         // --- グラフ描画 ---
-        const CHART_LEN = 120; // 保持点数
+        // 全期間（最大 30日×24時間=720点）を保持し全て表示
+        const CHART_MAX = 720;
         const chartData = {
             temp:   [],
             humid:  [],
@@ -554,23 +561,31 @@
 
         function pushChart(key, val) {
             chartData[key].push(val);
-            if (chartData[key].length > CHART_LEN) chartData[key].shift();
+            // 上限を超えたら先頭を捨てる（念のため）
+            if (chartData[key].length > CHART_MAX) chartData[key].shift();
+        }
+
+        function clearCharts() {
+            Object.keys(chartData).forEach(k => chartData[k] = []);
         }
 
         function drawChart(svgId, values, color, min, max, values2, color2) {
             const svg = document.getElementById(svgId);
             if (!svg || values.length < 2) return;
             const W = 300, H = 80, PAD = 4;
+            const n = values.length;
             const range = max - min || 1;
             const pts = (arr) => arr.map((v, i) => {
-                const x = PAD + (i / (CHART_LEN - 1)) * (W - PAD * 2);
+                const x = PAD + (i / (CHART_MAX - 1)) * (W - PAD * 2);
                 const y = H - PAD - ((v - min) / range) * (H - PAD * 2);
                 return `${x.toFixed(1)},${y.toFixed(1)}`;
             }).join(' ');
 
-            // 最新値テキスト
-            const last = values[values.length - 1];
+            // 全期間ラベル（右端=現在、左端=開始）
+            const last = values[n - 1];
             const dispVal = max > 1000 ? Math.round(last) : last.toFixed(1);
+            // 経過ステップを時間表示（Day換算）
+            const dayLabel = n >= 24 ? `Day${Math.ceil(n/24)}` : `${n}h`;
 
             let extra = '';
             if (values2 && values2.length >= 2) {
@@ -580,7 +595,8 @@
                 <rect width="300" height="80" rx="4" fill="#f8fafc"/>
                 <polyline points="${pts(values)}" fill="none" stroke="${color}" stroke-width="2"/>
                 ${extra}
-                <text x="${W - PAD}" y="12" text-anchor="end" class="chart-label" font-size="11" fill="${color}">${dispVal}</text>
+                <text x="${PAD}" y="12" text-anchor="start" font-size="9" fill="#94a3b8">${dayLabel}</text>
+                <text x="${W - PAD}" y="12" text-anchor="end" font-size="11" fill="${color}">${dispVal}</text>
             `;
         }
 
@@ -593,7 +609,7 @@
 
             drawChart('chart-temp',   chartData.temp,   '#3b82f6', -5,  40);
             drawChart('chart-humid',  chartData.humid,  '#0ea5e9',  0, 100);
-            drawChart('chart-light',  chartData.light,  '#f59e0b',  0, 100000);
+            drawChart('chart-light',  chartData.light,  '#f59e0b',  0, 5000);
             drawChart('chart-growth', chartData.growth, '#22c55e',  0, 100, chartData.damage, '#f43f5e');
         }
 
@@ -703,6 +719,17 @@
                 ledM.classList.remove('led-active');
             }
 
+            // ショーケースの明暗: 自然光 + LED を合算した総光量で制御
+            // 屋内想定ピーク(LED含む) ~20000lx を上限として 0〜1 に正規化
+            const lightRatio = Math.min(1, state.light / 20000);
+            const overlay = document.getElementById('light-overlay');
+            if (overlay) {
+                // 昼は暖色の陽光、LED点灯時は白寄り
+                const hue  = state.ledActive ? 60 : 45;   // LED=白寄り / 太陽=暖色
+                const alpha = (lightRatio * 0.55).toFixed(3);
+                overlay.style.background = `hsla(${hue}, 100%, 95%, ${alpha})`;
+            }
+
             const waterHeight = Math.max(0, 8 + state.waterLevel * 2) + Math.sin(Date.now() / 1000) * 1.5;
             const ecColor = `rgba(56, ${Math.max(120, 255 - state.ec * 60)}, 248, 0.4)`;
             for(let i=1; i<=6; i++) {
@@ -806,6 +833,7 @@
             simAccum     = 0;
             state.sunLux = 0;
             document.getElementById('sim-clock').textContent = 'Day 1 - 00:00';
+            clearCharts();
             addLog("System parameters reset.");
         }
 

@@ -18,14 +18,15 @@ class WeatherGenerator {
         const stats = this.tokyoStats[month] || this.tokyoStats[4]; // デフォルトは4月
         const data = [];
 
-        // 月ごとの日照ピーク（簡易モデル）
+        // 月ごとの日照ピーク（屋内・よく日光が入る室内想定）
+        // 晴天時の窓際を想定（夏: 5000lx、春/秋: 4000lx、冬: 2500lx）
         const peakMap = {
-            1:  30000,
-            4:  45000,
-            7:  80000,
-            10: 50000
+            1:  2500,
+            4:  4000,
+            7:  5000,
+            10: 4000
         };
-        const peakLux = opts.peakLux || peakMap[month] || 45000;
+        const peakLux = opts.peakLux || peakMap[month] || 4000;
         const sunrise = (typeof opts.sunrise === 'number') ? opts.sunrise : 6;
         const sunset  = (typeof opts.sunset === 'number')  ? opts.sunset  : 18;
 
