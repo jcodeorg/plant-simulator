@@ -307,6 +307,11 @@
                         </select>
                     </div>
                 </div>
+                <!-- リアルタイム電気代 -->
+                <div class="flex items-center justify-between mt-2 bg-yellow-50 rounded-lg px-3 py-1.5 border border-yellow-100">
+                    <span class="text-xs text-yellow-700">⚡ LED電気代（累積）</span>
+                    <span id="cost-realtime" class="text-xs font-bold text-yellow-800">0.0円</span>
+                </div>
                 <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
                     <div class="flex flex-col">
                         <label class="text-slate-500">日の出 (hour)</label>
@@ -350,11 +355,11 @@
                 <div id="panel-manual">
                     <!-- 手動操作ボタン -->
                     <div class="grid grid-cols-4 gap-3 mb-4">
-                        <button class="manual-btn border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+                        <button id="btn-led-on" class="manual-btn border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
                                 onclick="manualLED(true)">
                             <span class="text-xl">💡</span>LED ON
                         </button>
-                        <button class="manual-btn border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                        <button id="btn-led-off" class="manual-btn border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"
                                 onclick="manualLED(false)">
                             <span class="text-xl">⚫</span>LED OFF
                         </button>
@@ -503,9 +508,14 @@
                 <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">💡 分析</p>
                 <ul id="result-comments" class="text-xs text-slate-700 space-y-1 list-none"></ul>
             </div>
-            <button onclick="resetSim()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-full transition text-sm">
-                🔄 新しいシミュレーションを開始
-            </button>
+            <div class="flex gap-2">
+                <button onclick="downloadCSV()" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2.5 rounded-full transition text-sm">
+                    📥 CSVダウンロード
+                </button>
+                <button onclick="resetSim()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-full transition text-sm">
+                    🔄 新しいシミュレーション
+                </button>
+            </div>
         </div>
     </div>
 
@@ -542,6 +552,7 @@
 
         // シミュレーション統計情報
         let simStats = { maxGrowth: 0, ledOnHours: 0, totalHours: 0 };
+        let csvLog   = []; // 時間ごとの観測記録 + マニュアルイベント
 
         const LED_LUX = 8000;  // LED 加算光量 (lx)
 
@@ -649,21 +660,40 @@
             }
         }
 
+        // --- CSVログ記録ヘルパー ---
+        function pushCsvRow(eventNote) {
+            if (weatherData.length === 0) return;
+            const idx = Math.min(weatherIndex, weatherData.length - 1);
+            const w   = weatherData[idx];
+            csvLog.push({ day: w.day, hour: w.hour,
+                temp: state.temp.toFixed(1), humid: state.humid.toFixed(1),
+                light: Math.round(state.light), ec: state.ec.toFixed(2),
+                growth: state.growth.toFixed(1),
+                damage: (state.damage * 100).toFixed(1),
+                etiolation: (state.etiolation * 100).toFixed(1),
+                waterLevel: state.waterLevel.toFixed(2),
+                led: state.ledActive ? 'ON' : 'OFF',
+                stage: state.stageName, event: eventNote || '' });
+        }
+
         // --- 手動操作 ---
         function manualLED(on) {
             state.ledManualMode = true;
             state.ledActive = on;
             state.light = state.sunLux + (on ? LED_LUX : 0);
             addLog(`手動: LED ${on ? 'ON (+' + LED_LUX + ' lx)' : 'OFF'}`, on ? 'success' : 'info');
+            pushCsvRow(`手動LED ${on ? 'ON' : 'OFF'}`);
         }
         function manualPump() {
             state.ec = Math.min(3.0, state.ec + 0.1);
             addLog('手動: ポンプ起動 (EC +0.1)', 'info');
+            pushCsvRow('手動ポンプ起動 EC+0.1');
         }
         function manualAddWater() {
             lettuce.addWater(2.0);
             state.waterLevel = lettuce.state.waterLevel;
             addLog('手動: 足し水 +2cm', 'info');
+            pushCsvRow('手動足し水 +2cm');
         }
 
         // --- タブ切り替え ---
@@ -808,6 +838,16 @@
                     simStats.totalHours++;
                     if (state.ledActive) simStats.ledOnHours++;
                     if (state.growth > simStats.maxGrowth) simStats.maxGrowth = state.growth;
+                    // 観測データをCSVログに記録
+                    csvLog.push({ day: w.day, hour: w.hour,
+                        temp: state.temp.toFixed(1), humid: state.humid.toFixed(1),
+                        light: Math.round(state.light), ec: state.ec.toFixed(2),
+                        growth: state.growth.toFixed(1),
+                        damage: (state.damage * 100).toFixed(1),
+                        etiolation: (state.etiolation * 100).toFixed(1),
+                        waterLevel: state.waterLevel.toFixed(2),
+                        led: state.ledActive ? 'ON' : 'OFF',
+                        stage: state.stageName, event: '' });
 
                     if (simStatus.damage >= 1.0) {
                         addLog(`Day${w.day} 枯れてしまいました...`, "error");
@@ -954,6 +994,26 @@
                 ledT.classList.remove('led-active');
                 ledM.classList.remove('led-active');
             }
+
+            // --- LED ON/OFF ボタンのハイライト ---
+            const btnLedOn  = document.getElementById('btn-led-on');
+            const btnLedOff = document.getElementById('btn-led-off');
+            if (btnLedOn && btnLedOff) {
+                if (state.ledManualMode && state.ledActive) {
+                    btnLedOn.className  = 'manual-btn border-yellow-500 bg-yellow-300 text-yellow-900 ring-2 ring-yellow-500 shadow-md';
+                    btnLedOff.className = 'manual-btn border-slate-300 bg-slate-50 text-slate-400 hover:bg-slate-100';
+                } else if (state.ledManualMode && !state.ledActive) {
+                    btnLedOn.className  = 'manual-btn border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100';
+                    btnLedOff.className = 'manual-btn border-slate-500 bg-slate-300 text-slate-800 ring-2 ring-slate-500 shadow-md';
+                } else {
+                    btnLedOn.className  = 'manual-btn border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100';
+                    btnLedOff.className = 'manual-btn border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100';
+                }
+            }
+
+            // --- リアルタイム電気代 ---
+            const costEl = document.getElementById('cost-realtime');
+            if (costEl) costEl.textContent = `${(simStats.ledOnHours * 2.4).toFixed(1)}円`;
 
             // --- ショーケース明暗オーバーレイ ---
             const lightRatio = Math.min(1, state.light / 20000);
@@ -1116,6 +1176,34 @@
             document.getElementById('result-modal').classList.remove('hidden');
         }
 
+        function downloadCSV() {
+            if (csvLog.length === 0) {
+                addLog('記録データがありません。シミュレーション実行後にダウンロードできます。', 'error');
+                return;
+            }
+            const headers = ['Day','Hour','気温(°C)','湿度(%)','光量(lx)','EC',
+                             '成長率(%)','ダメージ(%)','徒長(%)','水位(cm)',
+                             'LED','ステージ','イベント'];
+            const rows = csvLog.map(r =>
+                [r.day, r.hour, r.temp, r.humid, r.light, r.ec,
+                 r.growth, r.damage, r.etiolation, r.waterLevel,
+                 r.led, r.stage, r.event]
+            );
+            const csvContent = [headers, ...rows]
+                .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+                .join('\r\n');
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            const dateStr = new Date().toISOString().slice(0, 10);
+            a.href     = url;
+            a.download = `plant-sim-${dateStr}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
         function changeMonth(month) {
             const m = parseInt(month);
             // まずシミュレータをフルリセット
@@ -1166,6 +1254,7 @@
             simPaused = true;
             state.simFinished = false;
             simStats = { maxGrowth: 0, ledOnHours: 0, totalHours: 0 };
+            csvLog   = [];
             state.temp   = 22.0;
             state.ec     = 1.2;
             state.growth = 0;
