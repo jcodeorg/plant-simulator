@@ -189,6 +189,22 @@
                         </div>
                     </div>
                 </div>
+                <div class="grid grid-cols-3 gap-2 mt-2 text-sm">
+                    <div class="bg-sky-50 p-2 rounded-lg border border-sky-100">
+                        <p class="text-[10px] text-sky-600 font-bold uppercase">Humidity (湿度)</p>
+                        <p class="text-lg font-bold text-slate-700"><span id="sensor-humid">55.0</span>%</p>
+                    </div>
+                    <div class="bg-rose-50 p-2 rounded-lg border border-rose-100">
+                        <p class="text-[10px] text-rose-600 font-bold uppercase">Damage (ダメージ)</p>
+                        <div class="w-full bg-rose-200 rounded-full h-2 mt-2">
+                            <div id="damage-bar" class="bg-rose-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="bg-teal-50 p-2 rounded-lg border border-teal-100">
+                        <p class="text-[10px] text-teal-600 font-bold uppercase">Water Level (水位差)</p>
+                        <p class="text-lg font-bold text-slate-700"><span id="sensor-water">0.00</span> cm</p>
+                    </div>
+                </div>
             </div>
 
             <div class="bg-slate-900 text-green-400 p-4 rounded-xl shadow-inner border border-slate-700">
@@ -262,13 +278,19 @@
         </div>
     </div>
 
+    <script src="PlantSimulator.js"></script>
     <script>
         // --- 状態管理 ---
+        const lettuce = new PlantSimulator();
+
         let state = {
             temp: 22.0,
             ec: 1.2,
             light: 1200, // 初期光量 (lx)
             growth: 0,
+            humid: 55.0,
+            damage: 0,
+            waterLevel: 0,
             ledActive: false,
             isProgramRunning: false,
             lastTick: Date.now()
@@ -369,6 +391,7 @@
         // --- メインループ ---
         function coreLoop() {
             const now = Date.now();
+            const dt = (now - state.lastTick) / 1000;
             state.lastTick = now;
 
             // 環境シミュレーション
@@ -385,14 +408,28 @@
                 executeBlockList(rootBlocks);
             }
 
-            // 生育量計算 (10,000lx以上, EC 1.2-2.2 が最適)
-            let growthStep = 0;
-            if (state.light > 10000) growthStep += 0.06;
-            if (state.ec >= 1.2 && state.ec <= 2.2) growthStep += 0.08;
-            state.growth += growthStep;
+            // 湿度シミュレーション
+            state.humid = 55 + Math.sin(now / 20000) * 5;
 
-            if (state.growth >= 100) {
-                addLog("Harvest cycle complete! Re-planting.", "success");
+            // 水位が極端に低い場合の緊急補水
+            if (lettuce.state.waterLevel < -4.0) {
+                lettuce.addWater(6.0);
+                addLog("自動灌水: +6cm 補水しました。", "info");
+            }
+
+            // PlantSimulator で成長・ダメージ・水位を更新
+            const simStatus = lettuce.update(state.temp, state.humid, state.light, dt);
+            state.growth = simStatus.growth * 100;
+            state.damage = simStatus.damage;
+            state.waterLevel = simStatus.waterLevel;
+
+            if (simStatus.damage >= 1.0) {
+                addLog("枯れてしまいました... リセットします。", "error");
+                resetSim();
+            } else if (simStatus.growth >= 1.0) {
+                addLog("収穫サイクル完了！ 再植付けします。", "success");
+                lettuce.state.growth = 0;
+                lettuce.state.damage *= 0.5;
                 state.growth = 0;
             }
 
@@ -405,6 +442,9 @@
             document.getElementById('sensor-ec').innerText = state.ec.toFixed(2);
             document.getElementById('sensor-light').innerText = Math.round(state.light);
             document.getElementById('growth-bar').style.width = `${state.growth}%`;
+            document.getElementById('sensor-humid').innerText = state.humid.toFixed(1);
+            document.getElementById('damage-bar').style.width = `${(state.damage * 100).toFixed(1)}%`;
+            document.getElementById('sensor-water').innerText = state.waterLevel.toFixed(2);
 
             const ledT = document.getElementById('led-top');
             const ledM = document.getElementById('led-mid');
@@ -416,7 +456,7 @@
                 ledM.classList.remove('led-active');
             }
 
-            const waterHeight = 10 + Math.sin(Date.now() / 1000) * 2;
+            const waterHeight = Math.max(0, 8 + state.waterLevel * 2) + Math.sin(Date.now() / 1000) * 1.5;
             const ecColor = `rgba(56, ${Math.max(120, 255 - state.ec * 60)}, 248, 0.4)`;
             for(let i=1; i<=6; i++) {
                 const w = document.getElementById(`water-${i}`);
@@ -428,7 +468,8 @@
                 if (p) {
                     const scale = 0.5 + (state.growth / 100);
                     p.style.transform = `scale(${scale})`;
-                    if (state.growth > 80) p.innerText = "🥬";
+                    if (state.damage > 0.7) p.innerText = "🍂";
+                    else if (state.growth > 80) p.innerText = "🥬";
                     else if (state.growth > 30) p.innerText = "🌱";
                     else p.innerText = "🔹";
                 }
@@ -460,12 +501,19 @@
             state.temp = 22.0;
             state.ec = 1.2;
             state.growth = 0;
+            state.humid = 55.0;
+            state.damage = 0;
+            state.waterLevel = 0;
             state.ledActive = false;
+            lettuce.state.growth = 0;
+            lettuce.state.damage = 0;
+            lettuce.state.waterLevel = 0;
             addLog("System parameters reset.");
         }
 
         window.onload = () => {
             addLog("Smart Farm OS initialized.");
+            addLog("PlantSimulator (サニーレタス) 読み込み完了。", "success");
             coreLoop();
         };
     </script>
