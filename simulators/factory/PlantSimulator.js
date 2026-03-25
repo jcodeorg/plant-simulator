@@ -116,8 +116,10 @@ class PlantSimulator {
         const sE = Math.max(0, t - 26) * 0.1 + (Math.abs(h - 60) > 25 ? 0.05 : 0);
         // 水位ストレス (水切れは致命的)
         const sW = this.state.waterLevel < -3.0 ? 0.3 : Math.abs(this.state.waterLevel) * 0.03;
-        // 徒長とチップバーンによる品質低下
-        const sQuality = (this.state.etiolation * 0.2) + (this.state.tipburn * 0.8);
+        // 徒長とチップバーンによる品質低下（個別に記録）
+        const sEtiol   = this.state.etiolation * 0.2;
+        const sTipburn = this.state.tipburn * 0.8;
+        const sQuality = sEtiol + sTipburn;
 
         const totalStress = (sE + sW + sQuality) * this.config.damageCoeff;
         const netDamage = totalStress - this.config.recoveryRate;
@@ -128,7 +130,15 @@ class PlantSimulator {
             stageName: sp.name,
             vpd: vpd,
             isDead: this.state.damage >= 1.0,
-            isHarvestable: this.state.growth >= 1.0 && this.state.damage < 0.5
+            isHarvestable: this.state.growth >= 1.0 && this.state.damage < 0.5,
+            stressBreakdown: {
+                env:      sE      * this.config.damageCoeff,  // 現時点の環境ストレス/h
+                water:    sW      * this.config.damageCoeff,  // 水分ストレス/h
+                etiol:    sEtiol  * this.config.damageCoeff,  // 徒長ストレス/h
+                tipburn:  sTipburn* this.config.damageCoeff,  // チップバーンストレス/h
+                recovery: this.config.recoveryRate,            // 自然回復/h
+                net:      netDamage                            // 正味ダメージ変化/h
+            }
         };
     }
 

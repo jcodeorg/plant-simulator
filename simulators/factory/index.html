@@ -268,6 +268,12 @@
                         <p class="text-lg font-bold text-slate-700"><span id="sensor-water">0.00</span> cm</p>
                     </div>
                 </div>
+
+                <!-- ダメージ原因内訳 -->
+                <div class="mt-2 bg-white border border-slate-200 rounded-xl p-3">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">📊 ダメージ原因内訳 <span class="normal-case font-normal text-slate-400">(現在時間あたり)</span></p>
+                    <div id="stress-breakdown" class="space-y-1.5"></div>
+                </div>
             </div>
 
             <!-- シミュレーション速度制御 -->
@@ -583,6 +589,7 @@
             ledLux: 8000,           // 現在設定中のLED光量 (lx) 1000〜15000
             etiolation: 0,          // 徒長度 0.0(正常)〜1.0(重度徒長)
             stageName: '発芽期',    // 現在の成長ステージ名
+            stressBreakdown: { env: 0, water: 0, etiol: 0, tipburn: 0, recovery: 0.001, net: 0 },
             simFinished: false,     // シミュレーション終了フラグ
             lastTick: Date.now()
         };
@@ -877,6 +884,7 @@
                     state.waterLevel = simStatus.waterLevel;
                     state.etiolation = simStatus.etiolation;
                     state.stageName  = simStatus.stageName;
+                    state.stressBreakdown = simStatus.stressBreakdown;
                     // 統計更新
                     simStats.totalHours++;
                     if (state.ledActive) {
@@ -1009,6 +1017,42 @@
             document.getElementById('damage-bar').style.width = `${(state.damage * 100).toFixed(1)}%`;
             document.getElementById('etiolation-bar').style.width = `${(state.etiolation * 100).toFixed(1)}%`;
             document.getElementById('sensor-water').innerText = state.waterLevel.toFixed(2);
+
+            // --- ダメージ原因内訳 ---
+            const sb = state.stressBreakdown;
+            const sbEl = document.getElementById('stress-breakdown');
+            if (sbEl && sb) {
+                const pDay = v => (v * 24 * 100).toFixed(2);  // /h → %/日
+                // スケール: 0.003/h (日毎7.2%のストレス) = バー100%
+                const barPct = v => Math.min(100, Math.max(0, v) / 0.003 * 100).toFixed(0);
+                const mkBar = (v, cls) =>
+                    `<div class="flex-1 bg-slate-100 rounded-full h-1.5"><div class="h-1.5 rounded-full ${cls} transition-all" style="width:${barPct(v)}%"></div></div>`;
+                const mkRow = (icon, label, v, cls, tip) => {
+                    const on = v > 1e-6;
+                    return `<div class="flex items-center gap-1.5 ${on ? '' : 'opacity-30'}" title="${tip}">
+                        <span class="text-base w-5 text-center">${icon}</span>
+                        <span class="text-[10px] w-[72px] text-slate-600 shrink-0">${label}</span>
+                        ${mkBar(v, cls)}
+                        <span class="text-[10px] font-mono w-[58px] text-right ${on ? 'text-rose-600 font-semibold' : 'text-slate-300'}">${on ? '+'+pDay(v)+'%/日' : '—'}</span>
+                    </div>`;
+                };
+                const netPos = (sb.net || 0) > 1e-6;
+                sbEl.innerHTML =
+                    mkRow('🌡️', '高温・湿度', sb.env,     'bg-orange-400', '気温 > 26°C、または湿度が適準巤するとダメージが発生') +
+                    mkRow('💧', '水分不足',   sb.water,   'bg-blue-400',   '水位が下がりすぎると蓄積し、水切れは致命的') +
+                    mkRow('🌿', '徒長',         sb.etiol,   'bg-yellow-500', '光量不足で茎が徒長すると品質が低下') +
+                    mkRow('🍂', 'チップバーン', sb.tipburn, 'bg-red-400',    '高光・高温時にカルシウム不足で発生') +
+                    `<div class="flex items-center gap-1.5 mt-1 pt-1 border-t border-slate-100">
+                        <span class="text-base w-5 text-center">💚</span>
+                        <span class="text-[10px] w-[72px] text-emerald-600 shrink-0">自然回復</span>
+                        <div class="flex-1"></div>
+                        <span class="text-[10px] font-mono w-[58px] text-right text-emerald-600 font-semibold">−${pDay(sb.recovery || 0.001)}%/日</span>
+                    </div>` +
+                    `<div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-200 font-bold text-[11px] ${netPos ? 'text-rose-600' : 'text-emerald-600'}">
+                        <span>${netPos ? '⚠️ ダメージ悪化中' : '✅ 回復中 / 安定'}</span>
+                        <span class="font-mono">${netPos ? '+' : ''}${pDay(sb.net || 0)}%/日</span>
+                    </div>`;
+            }
 
             // --- ステージタイムライン ---
             const si = state.growth < 10 ? 0 : state.growth < 30 ? 1 : state.growth < 70 ? 2 : 3;
