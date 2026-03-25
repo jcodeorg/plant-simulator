@@ -316,10 +316,18 @@
                         <span class="text-xs text-slate-500">月:</span>
                         <select id="month-select" onchange="changeMonth(this.value)"
                                 class="text-xs border border-slate-200 rounded px-2 py-1 bg-white">
-                            <option value="1">1月 (冬)</option>
-                            <option value="4" selected>4月 (春)</option>
-                            <option value="7">7月 (夏)</option>
-                            <option value="10">10月 (秋)</option>
+                            <optgroup label="屋外">
+                                <option value="outdoor_1">冬 1月 (屋外)</option>
+                                <option value="outdoor_4" selected>春 4月 (屋外)</option>
+                                <option value="outdoor_7">夏 7月 (屋外)</option>
+                                <option value="outdoor_10">秋 10月 (屋外)</option>
+                            </optgroup>
+                            <optgroup label="屋内">
+                                <option value="indoor_1">冬 1月 (屋内)</option>
+                                <option value="indoor_4">春 4月 (屋内)</option>
+                                <option value="indoor_7">夏 7月 (屋内)</option>
+                                <option value="indoor_10">秋 10月 (屋内)</option>
+                            </optgroup>
                         </select>
                     </div>
                 </div>
@@ -620,16 +628,20 @@
         const STAGE_OPT_TEMP  = [22,  20,   20,   18  ];  // 最適温度 (°C)
         const STAGE_NAMES     = ['発芽期', '幼苗期', '生育期', '成熟期'];
 
-        // 月ごとのデフォルト太陽設定（changeMonth・起動時・sunSettings初期化で共有）
+        // 環境プリセット（changeMonth・起動時・sunSettings初期化で共有）
         const MONTH_DEFAULTS = {
-            1:  { sunrise: 7, sunset: 17, peakLux: 4000 }, // 冬
-            4:  { sunrise: 6, sunset: 18, peakLux: 50000 }, // 春（屋外）
-            7:  { sunrise: 5, sunset: 19, peakLux: 6000 }, // 夏
-            10: { sunrise: 6, sunset: 17, peakLux: 5000 }, // 秋
+            'outdoor_1':  { month: 1,  sunrise: 7, sunset: 17, peakLux: 20000 }, // 屋外・冬
+            'outdoor_4':  { month: 4,  sunrise: 6, sunset: 18, peakLux: 50000 }, // 屋外・春
+            'outdoor_7':  { month: 7,  sunrise: 5, sunset: 19, peakLux: 80000 }, // 屋外・夏
+            'outdoor_10': { month: 10, sunrise: 6, sunset: 17, peakLux: 35000 }, // 屋外・秋
+            'indoor_1':   { month: 1,  sunrise: 8, sunset: 17, peakLux: 1000  }, // 屋内・冬
+            'indoor_4':   { month: 4,  sunrise: 7, sunset: 18, peakLux: 1000  }, // 屋内・春
+            'indoor_7':   { month: 7,  sunrise: 6, sunset: 19, peakLux: 1000  }, // 屋内・夏
+            'indoor_10':  { month: 10, sunrise: 7, sunset: 17, peakLux: 1000  }, // 屋内・秋
         };
 
-        // 太陽設定（UIで変更可）— 初期値は4月のデフォルトから生成
-        let sunSettings = { ...MONTH_DEFAULTS[4] };
+        // 太陽設定（UIで変更可）— 初期値は屋外4月のデフォルトから生成
+        let sunSettings = { ...MONTH_DEFAULTS['outdoor_4'] };
 
         // --- ロギング ---
         function addLog(msg, type = 'info') {
@@ -1376,11 +1388,10 @@
             URL.revokeObjectURL(url);
         }
 
-        function changeMonth(month) {
-            const m = parseInt(month);
-            const defaults = MONTH_DEFAULTS[m] || MONTH_DEFAULTS[4];
+        function changeMonth(key) {
+            const defaults = MONTH_DEFAULTS[key] || MONTH_DEFAULTS['outdoor_4'];
 
-            // sunSettings を月のデフォルト値で上書き
+            // sunSettings を選択プリセットの値で上書き
             sunSettings.sunrise = defaults.sunrise;
             sunSettings.sunset  = defaults.sunset;
             sunSettings.peakLux = defaults.peakLux;
@@ -1392,8 +1403,10 @@
 
             // シミュレータをフルリセットして新しい天候データで再生成
             resetSim();
-            weatherData = weather.generateMonthData(m, sunSettings);
-            addLog(`${m}月のデータでシミュレーターを再起動しました（日の出 ${sunSettings.sunrise}時 / 日の入り ${sunSettings.sunset}時 / ピーク ${sunSettings.peakLux.toLocaleString()}lx）`, "success");
+            weatherData = weather.generateMonthData(defaults.month, sunSettings);
+            const sel = document.getElementById('month-select');
+            const label = sel.options[sel.selectedIndex].text;
+            addLog(`${label}のデータでシミュレーターを再起動しました（日の出 ${sunSettings.sunrise}時 / 日の入り ${sunSettings.sunset}時 / ピーク ${sunSettings.peakLux.toLocaleString()}lx）`, "success");
         }
 
         function initWeather(month) {
@@ -1414,8 +1427,9 @@
             sunSettings.sunset  = Math.max(0, Math.min(23, isNaN(ss) ? sunSettings.sunset : ss));
             sunSettings.peakLux = Math.max(0, isNaN(pk) ? sunSettings.peakLux : pk);
             const monthSel = document.getElementById('month-select');
-            const m = parseInt(monthSel.value || 4, 10);
-            weatherData = weather.generateMonthData(m, sunSettings);
+            const _key = monthSel.value || 'outdoor_4';
+            const _monthNum = (MONTH_DEFAULTS[_key] || MONTH_DEFAULTS['outdoor_4']).month;
+            weatherData = weather.generateMonthData(_monthNum, sunSettings);
             weatherIndex = 0;
             simAccum = 0;
         }
