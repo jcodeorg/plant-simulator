@@ -220,8 +220,9 @@
                         <p class="text-lg font-bold text-slate-700"><span id="sensor-ec">1.2</span> <small>mS/cm</small></p>
                     </div>
                     <div class="bg-yellow-50 p-2 rounded-lg border border-yellow-100">
-                        <p class="text-[10px] text-yellow-600 font-bold uppercase">Light Intensity (光量)</p>
+                        <p class="text-[10px] text-yellow-600 font-bold uppercase">Light / Sensor (太陽光センサ)</p>
                         <p class="text-lg font-bold text-slate-700"><span id="sensor-light">1200</span> <small>lx</small></p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">出力: <span id="sensor-light-total">1200</span> lx</p>
                     </div>
                 </div>
 
@@ -690,7 +691,7 @@
                     const targetValue = parseFloat(block.querySelector('.value-input').value);
                     
                     let currentValue = 0;
-                    if (sensorType === 'light') currentValue = state.light;
+                    if (sensorType === 'light') currentValue = state.sunLux;  // センサ値 = 太陽光のみ
                     if (sensorType === 'temp')  currentValue = state.temp;
                     if (sensorType === 'ec')    currentValue = state.ec;
                     if (sensorType === 'hour')  currentValue = state.hour;
@@ -1031,7 +1032,8 @@
         function render() {
             document.getElementById('sensor-temp').innerText = state.temp.toFixed(1);
             document.getElementById('sensor-ec').innerText = state.ec.toFixed(2);
-            document.getElementById('sensor-light').innerText = Math.round(state.light);
+            document.getElementById('sensor-light').innerText = Math.round(state.sunLux);  // センサ値（太陽光のみ）
+            document.getElementById('sensor-light-total').innerText = Math.round(state.light); // 出力値（太陽光+LED）
             document.getElementById('sensor-humid').innerText = state.humid.toFixed(1);
             document.getElementById('damage-bar').style.width = `${(state.damage * 100).toFixed(1)}%`;
             document.getElementById('etiolation-bar').style.width = `${(state.etiolation * 100).toFixed(1)}%`;
