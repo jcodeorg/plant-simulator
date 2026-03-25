@@ -492,6 +492,19 @@
                     `Day ${cw.day} - ${String(cw.hour).padStart(2, '0')}:00`;
             }
 
+            // 現在の天候ステップの環境値をセンサー表示に毎フレーム反映（停止中・ステップ間も含む）
+            if (weatherData.length > 0) {
+                const di = Math.min(weatherIndex, weatherData.length - 1);
+                const dw = weatherData[di];
+                state.temp  = dw.temp;
+                state.humid = dw.humidity;
+                // ユーザーの制御ブロックが動いていない場合のみ天候スケジュールでLEDを制御
+                if (!state.isProgramRunning) {
+                    state.ledActive = dw.lux > 0;
+                    state.light     = state.ledActive ? 15000 : 0;
+                }
+            }
+
             render();
             requestAnimationFrame(coreLoop);
         }

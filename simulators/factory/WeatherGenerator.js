@@ -14,7 +14,7 @@ class WeatherGenerator {
         const stats = this.tokyoStats[month] || this.tokyoStats[4]; // デフォルトは4月
         const data = [];
 
-        for (let day = 1; day <= 45; day++) {
+        for (let day = 1; day <= 30; day++) {
             for (let hour = 0; hour < 24; hour++) {
                 // 1. 気温の計算 (14時にピーク、正弦波)
                 const timeDiff = Math.sin((hour - 8) * Math.PI / 12); 
@@ -22,6 +22,12 @@ class WeatherGenerator {
 
                 // 2. 湿度の計算 (気温が高いと低くなる)
                 const humid = stats.hum - (timeDiff * 10) + (Math.random() * 5);
+
+                // 3. 明るさ (LEDライト設定: 7:00 - 21:00 は 15000Lx, それ以外は 0)
+                let lux = 0;
+                if (hour >= 7 && hour <= 21) {
+                    lux = 15000; 
+                }
 
                 data.push({
                     day: day,
