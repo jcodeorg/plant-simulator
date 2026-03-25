@@ -1355,7 +1355,7 @@
             const csvBtn    = document.getElementById('modal-csv-btn');
             const resetBtn  = document.getElementById('modal-reset-btn');
             if (resumeBtn) resumeBtn.classList.toggle('hidden', !isPause);
-            if (csvBtn)    csvBtn.classList.toggle('hidden', isPause);
+            if (csvBtn)    csvBtn.classList.remove('hidden'); // 一時停止時も常に表示
             if (resetBtn)  resetBtn.textContent = isPause ? '🔄 リセット' : '🔄 新しいシミュレーション';
 
             if (isPause) addLog(`Day ${endDay} 一時停止 — 中間評価を表示中`, 'info');
