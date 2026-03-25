@@ -87,14 +87,15 @@ class PlantSimulator {
         let deltaG = 0;
         if (isDaytime) {
             // 昼間: 光合成でエネルギーを蓄める
-            this.state.storageDLI = Math.min(1.0, this.state.storageDLI + fL * fT * dt);
+            // /10 で正規化: 良好な照度12hでほぼ満タン(~0.7)になるスケール
+            this.state.storageDLI = Math.min(1.0, this.state.storageDLI + fL * fT * dt / 10);
 
-            // デンプン飽和チェック: 蓄積耙が上限近くになれば光合成が阀害
+            // デンプン飽和チェック: 0.7超で光合成抑制・わずかにチップバーンリスク上昇
             let satDebuff = 1.0;
-            if (this.state.storageDLI > 0.5) {
-                satDebuff = 0.5;
-                // デンプン飽和による生理障害（チップバーンリスク上昇）
-                this.state.tipburn = Math.min(1.0, this.state.tipburn + 0.01 * dt);
+            if (this.state.storageDLI > 0.7) {
+                satDebuff = 0.8;  // 抑制は軽め
+                // 飽和によるチップバーンリスク（非常にゆっくり）
+                this.state.tipburn = Math.min(1.0, this.state.tipburn + 0.002 * dt);
             }
             deltaG = sp.baseSpeed * fL * fT * fVPD * iW * satDebuff * dt;
         } else {
@@ -125,11 +126,11 @@ class PlantSimulator {
         let tipburnStep = 0;
         if (this.state.growth > 0.3) {
             // 高負荷（強い光＋高温）かつ 蒸散不良（VPD異常）
-            const isHighLoad = (l > 12000 && t > 24);
-            const vpdBad = (vpd < 0.5 || vpd > 1.5);
+            const isHighLoad = (l > 15000 && t > 26);
+            const vpdBad = (vpd < 0.4 || vpd > 1.8);
             if (isHighLoad && vpdBad) {
                 // 急激な成長にカルシウム供給が追いつかない状態を模倣
-                tipburnStep = deltaG * 5.0 * dt; 
+                tipburnStep = deltaG * 1.5 * dt;
             }
         }
         this.state.tipburn = Math.min(1.0, this.state.tipburn + tipburnStep);
@@ -141,7 +142,7 @@ class PlantSimulator {
         const sW = this.state.waterLevel < -3.0 ? 0.3 : Math.abs(this.state.waterLevel) * 0.03;
         // 徒長とチップバーンによる品質低下（個別に記録）
         const sEtiol   = this.state.etiolation * 0.2;
-        const sTipburn = this.state.tipburn * 0.8;
+        const sTipburn = this.state.tipburn * 0.3;   // 0.8 → 0.3 に緩和
         const sQuality = sEtiol + sTipburn;
 
         const totalStress = (sE + sW + sQuality) * this.config.damageCoeff;
