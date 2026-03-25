@@ -337,17 +337,11 @@
         <div class="lg:col-span-7 space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-lg border border-slate-200 flex flex-col">
 
-                <!-- ヘッダー: タブ + リセット -->
-                <div class="flex items-center justify-between mb-4">
+                <!-- ヘッダー: タブ -->
+                <div class="flex items-center mb-4">
                     <div class="flex gap-2">
                         <button id="tab-manual" class="tab-btn active" onclick="switchTab('manual')">&#128075; 手動</button>
                         <button id="tab-auto"   class="tab-btn inactive" onclick="switchTab('auto')">&#129520; 自動</button>
-                    </div>
-                    <div class="flex gap-2">
-                        <button id="btn-run" onclick="toggleProgram()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-full font-bold shadow-md transition text-sm flex items-center">
-                            <span id="run-icon" class="mr-1">▶</span><span id="run-text">自動実行</span>
-                        </button>
-                        <button onclick="resetSim()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-full font-bold transition text-sm">リセット</button>
                     </div>
                 </div>
 
@@ -546,8 +540,6 @@
             damage: 0,
             waterLevel: 0,
             ledActive: false,
-            ledManualMode: false,   // true=手動操作中（天候スケジュール上書き禁止）
-            isProgramRunning: false,
             etiolation: 0,          // 徒長度 0.0(正常)〜1.0(重度徒長)
             stageName: '発芽期',    // 現在の成長ステージ名
             simFinished: false,     // シミュレーション終了フラグ
@@ -683,7 +675,6 @@
 
         // --- 手動操作 ---
         function manualLED(on) {
-            state.ledManualMode = true;
             state.ledActive = on;
             state.light = state.sunLux + (on ? LED_LUX : 0);
             addLog(`手動: LED ${on ? 'ON (+' + LED_LUX + ' lx)' : 'OFF'}`, on ? 'success' : 'info');
@@ -708,11 +699,6 @@
             document.getElementById('panel-auto').style.display   = isManual ? 'none' : '';
             document.getElementById('tab-manual').className = 'tab-btn ' + (isManual ? 'active' : 'inactive');
             document.getElementById('tab-auto').className   = 'tab-btn ' + (isManual ? 'inactive' : 'active');
-            // 自動タブに切り替えたときは自動実行ボタンのテキストを更新
-            if (!isManual && !state.isProgramRunning) {
-                document.getElementById('run-text').innerText = '自動実行';
-                document.getElementById('run-icon').innerText = '▶';
-            }
         }
 
         // --- グラフ描画 ---
@@ -814,12 +800,12 @@
                     // EC の自然減少
                     state.ec = Math.max(0, state.ec - 0.001);
 
-                    // 制御ブロックを実行 (LED 等を上書き可能)
-                    if (state.isProgramRunning) {
-                        const rootBlocks = document.getElementById('workspace').children;
+                    // 制御ブロックを毎時間自動実行 (ブロックがあれば実行、なければ太陽光スケジュール)
+                    const rootBlocks = document.getElementById('workspace').children;
+                    if (rootBlocks.length > 0) {
                         executeBlockList(rootBlocks);
-                    } else if (!state.ledManualMode) {
-                        // 手動モードでない場合は天候スケジュールに従う
+                    } else {
+                        // ブロック未設定時は太陽光スケジュールに従う
                         state.ledActive = w.lux > 0;
                     }
 
@@ -884,8 +870,9 @@
                 state.humid  = dw.humidity;
                 state.sunLux = dw.lux;
                 state.hour   = dw.hour;
-                // 手動モード局外、かつ制御ブロック局外のときのみ天候スケジュールでLEDを制御
-                if (!state.ledManualMode && !state.isProgramRunning) {
+                // ブロックがない場合のみ太陽光スケジュールでLEDを制御
+                const frameBlocks = document.getElementById('workspace').children;
+                if (frameBlocks.length === 0) {
                     state.ledActive = dw.lux > 0;
                 }
                 state.light = state.sunLux + (state.ledActive ? LED_LUX : 0);
@@ -1001,19 +988,16 @@
                 ledM.classList.remove('led-active');
             }
 
-            // --- LED ON/OFF ボタンのハイライト ---
+            // --- LED ON/OFF ボタンのハイライト (現在のLED状態を山映) ---
             const btnLedOn  = document.getElementById('btn-led-on');
             const btnLedOff = document.getElementById('btn-led-off');
             if (btnLedOn && btnLedOff) {
-                if (state.ledManualMode && state.ledActive) {
+                if (state.ledActive) {
                     btnLedOn.className  = 'manual-btn border-yellow-500 bg-yellow-300 text-yellow-900 ring-2 ring-yellow-500 shadow-md';
                     btnLedOff.className = 'manual-btn border-slate-300 bg-slate-50 text-slate-400 hover:bg-slate-100';
-                } else if (state.ledManualMode && !state.ledActive) {
-                    btnLedOn.className  = 'manual-btn border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100';
-                    btnLedOff.className = 'manual-btn border-slate-500 bg-slate-300 text-slate-800 ring-2 ring-slate-500 shadow-md';
                 } else {
                     btnLedOn.className  = 'manual-btn border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100';
-                    btnLedOff.className = 'manual-btn border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100';
+                    btnLedOff.className = 'manual-btn border-slate-500 bg-slate-300 text-slate-800 ring-2 ring-slate-500 shadow-md';
                 }
             }
 
@@ -1042,27 +1026,6 @@
                 }
                 const p = document.getElementById(`p${i}`);
                 if (p) p.innerHTML = plantSVG;
-            }
-        }
-
-        function toggleProgram() {
-            state.isProgramRunning = !state.isProgramRunning;
-            const btn = document.getElementById('btn-run');
-            const text = document.getElementById('run-text');
-            const icon = document.getElementById('run-icon');
-            
-            if (state.isProgramRunning) {
-                btn.classList.replace('bg-emerald-500', 'bg-rose-500');
-                btn.classList.replace('hover:bg-emerald-600', 'hover:bg-rose-600');
-                text.innerText = "STOP PROGRAM";
-                icon.innerText = "■";
-                addLog("Control sequence initiated.", "success");
-            } else {
-                btn.classList.replace('bg-rose-500', 'bg-emerald-500');
-                btn.classList.replace('hover:bg-rose-600', 'hover:bg-emerald-600');
-                text.innerText = "RUN PROGRAM";
-                icon.innerText = "▶";
-                addLog("System switched to Manual mode.", "error");
             }
         }
 
@@ -1293,7 +1256,6 @@
             state.damage = 0;
             state.waterLevel = 0;
             state.ledActive     = false;
-            state.ledManualMode = false;
             state.etiolation    = 0;
             state.stageName     = '発芽期';
             lettuce.state.growth     = 0;
