@@ -120,11 +120,25 @@
             z-index: 1;
         }
         .plant-unit {
-            font-size: 2rem;
             z-index: 2;
-            transition: transform 0.5s ease-out;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            min-height: 12px;
             filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+            transition: filter 0.3s;
         }
+
+        /* ステージタイムライン */
+        .stage-track { position: relative; height: 22px; display: flex; border-radius: 11px; overflow: hidden; }
+        .stage-seg { display: flex; align-items: center; justify-content: center;
+                     font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.95);
+                     transition: opacity 0.4s; overflow: hidden; white-space: nowrap; }
+        .stage-seg.dim { opacity: 0.28; }
+        .stage-cursor { position: absolute; top: 50%; transform: translate(-50%, -50%);
+                        width: 14px; height: 14px; border-radius: 50%;
+                        background: white; border: 3px solid #0f172a;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.45); transition: left 0.5s ease; z-index: 10; }
         .led-strip {
             position: absolute;
             top: 2px;
@@ -182,19 +196,24 @@
                 <div class="showcase" id="main-showcase">
                     <div id="light-overlay"></div>
                     <div id="led-top" class="led-strip" style="top: 5px;"></div>
-                    <div class="shelf"><div class="water-layer" id="water-1"></div><div class="plant-unit" id="p1">🌱</div></div>
-                    <div class="shelf"><div class="water-layer" id="water-2"></div><div class="plant-unit" id="p2">🌱</div></div>
-                    <div class="shelf"><div class="water-layer" id="water-3"></div><div class="plant-unit" id="p3">🌱</div></div>
+                    <div class="shelf"><div class="water-layer" id="water-1"></div><div class="plant-unit" id="p1"></div></div>
+                    <div class="shelf"><div class="water-layer" id="water-2"></div><div class="plant-unit" id="p2"></div></div>
+                    <div class="shelf"><div class="water-layer" id="water-3"></div><div class="plant-unit" id="p3"></div></div>
                     <div id="led-mid" class="led-strip" style="top: 50%;"></div>
-                    <div class="shelf"><div class="water-layer" id="water-4"></div><div class="plant-unit" id="p4">🌱</div></div>
-                    <div class="shelf"><div class="water-layer" id="water-5"></div><div class="plant-unit" id="p5">🌱</div></div>
-                    <div class="shelf"><div class="water-layer" id="water-6"></div><div class="plant-unit" id="p6">🌱</div></div>
+                    <div class="shelf"><div class="water-layer" id="water-4"></div><div class="plant-unit" id="p4"></div></div>
+                    <div class="shelf"><div class="water-layer" id="water-5"></div><div class="plant-unit" id="p5"></div></div>
+                    <div class="shelf"><div class="water-layer" id="water-6"></div><div class="plant-unit" id="p6"></div></div>
                 </div>
 
+                <!-- 環境センサー 2×2 -->
                 <div class="grid grid-cols-2 gap-3 mt-4 text-sm">
                     <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
                         <p class="text-[10px] text-blue-600 font-bold uppercase">Temperature (気温)</p>
                         <p class="text-lg font-bold text-slate-700"><span id="sensor-temp">24.0</span>°C</p>
+                    </div>
+                    <div class="bg-sky-50 p-2 rounded-lg border border-sky-100">
+                        <p class="text-[10px] text-sky-600 font-bold uppercase">Humidity (湿度)</p>
+                        <p class="text-lg font-bold text-slate-700"><span id="sensor-humid">55.0</span>%</p>
                     </div>
                     <div class="bg-green-50 p-2 rounded-lg border border-green-100">
                         <p class="text-[10px] text-green-600 font-bold uppercase">EC Value (EC値)</p>
@@ -204,22 +223,44 @@
                         <p class="text-[10px] text-yellow-600 font-bold uppercase">Light Intensity (光量)</p>
                         <p class="text-lg font-bold text-slate-700"><span id="sensor-light">1200</span> <small>lx</small></p>
                     </div>
-                    <div class="bg-purple-50 p-2 rounded-lg border border-purple-100">
-                        <p class="text-[10px] text-purple-600 font-bold uppercase">Cumulative Growth (累積生育量)</p>
-                        <div class="w-full bg-purple-200 rounded-full h-2 mt-1">
-                            <div id="growth-bar" class="bg-purple-600 h-2 rounded-full" style="width: 0%"></div>
+                </div>
+
+                <!-- ステージタイムライン (フル幅) -->
+                <div class="mt-2 bg-slate-50 rounded-xl px-3 pt-2 pb-2 border border-slate-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">🌿 成長ステージ</span>
+                        <span class="text-[10px] text-slate-400" id="stage-req">💡 300lx | 🌡️ 22°C</span>
+                    </div>
+                    <div class="relative">
+                        <div class="stage-track">
+                            <div class="stage-seg dim" id="ss0" style="width:10%;background:#94a3b8;">発芽</div>
+                            <div class="stage-seg dim" id="ss1" style="width:20%;background:#84cc16;">幼苗</div>
+                            <div class="stage-seg dim" id="ss2" style="width:40%;background:#22c55e;">生育</div>
+                            <div class="stage-seg dim" id="ss3" style="width:30%;background:#f59e0b;">成熟</div>
+                        </div>
+                        <div class="stage-cursor" id="stage-cursor" style="left:0%"></div>
+                    </div>
+                    <div class="flex items-center justify-between mt-1.5">
+                        <span class="text-[11px] font-bold text-purple-700" id="sensor-stage">発芽期</span>
+                        <div class="flex items-center gap-2">
+                            <span id="light-warn" class="hidden text-[10px] font-bold text-amber-600">⚠️ 光量不足→徒長</span>
+                            <span class="text-[10px] text-slate-500 font-mono" id="sens-growth-pct">0.0%</span>
                         </div>
                     </div>
                 </div>
+
+                <!-- 植物ステータス: ダメージ・徒長・水位 -->
                 <div class="grid grid-cols-3 gap-2 mt-2 text-sm">
-                    <div class="bg-sky-50 p-2 rounded-lg border border-sky-100">
-                        <p class="text-[10px] text-sky-600 font-bold uppercase">Humidity (湿度)</p>
-                        <p class="text-lg font-bold text-slate-700"><span id="sensor-humid">55.0</span>%</p>
-                    </div>
                     <div class="bg-rose-50 p-2 rounded-lg border border-rose-100">
                         <p class="text-[10px] text-rose-600 font-bold uppercase">Damage (ダメージ)</p>
                         <div class="w-full bg-rose-200 rounded-full h-2 mt-2">
                             <div id="damage-bar" class="bg-rose-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="bg-amber-50 p-2 rounded-lg border border-amber-100">
+                        <p class="text-[10px] text-amber-600 font-bold uppercase">Etiolation (徒長)</p>
+                        <div class="w-full bg-amber-200 rounded-full h-2 mt-2">
+                            <div id="etiolation-bar" class="bg-amber-500 h-2 rounded-full transition-all" style="width: 0%"></div>
                         </div>
                     </div>
                     <div class="bg-teal-50 p-2 rounded-lg border border-teal-100">
@@ -417,10 +458,17 @@
             ledActive: false,
             ledManualMode: false,   // true=手動操作中（天候スケジュール上書き禁止）
             isProgramRunning: false,
+            etiolation: 0,          // 徒長度 0.0(正常)〜1.0(重度徒長)
+            stageName: '発芽期',    // 現在の成長ステージ名
             lastTick: Date.now()
         };
 
         const LED_LUX = 8000;  // LED 加算光量 (lx)
+
+        // ステージ別パラメータ (PlantSimulatorと同期)
+        const STAGE_MIN_LIGHT = [300, 1500, 3000, 2000];  // 徒長開始照度 (lx)
+        const STAGE_OPT_TEMP  = [22,  20,   20,   18  ];  // 最適温度 (°C)
+        const STAGE_NAMES     = ['発芽期', '幼苗期', '生育期', '成熟期'];
 
         // 太陽設定（UIで変更可）
         let sunSettings = {
@@ -669,9 +717,11 @@
 
                     // PlantSimulator で1時間分更新 (dt=1.0)
                     const simStatus = lettuce.update(state.temp, state.humid, state.light, 1.0);
-                    state.growth    = simStatus.growth * 100;
-                    state.damage    = simStatus.damage;
+                    state.growth     = simStatus.growth * 100;
+                    state.damage     = simStatus.damage;
                     state.waterLevel = simStatus.waterLevel;
+                    state.etiolation = simStatus.etiolation;
+                    state.stageName  = simStatus.stageName;
 
                     if (simStatus.damage >= 1.0) {
                         addLog(`Day${w.day} 枯れてしまいました... リセットします。`, "error");
@@ -715,15 +765,101 @@
             requestAnimationFrame(coreLoop);
         }
 
+        /**
+         * 成長ステージ・健康状態を反映したCSS植物SVGを生成
+         * @param {number} growth     0–1000の成長% (state.growth)
+         * @param {number} etiolation 0–1.0 徒長度
+         * @param {number} damage     0–1.0 ダメージ
+         */
+        function makePlantSVG(growth, etiolation, damage) {
+            const g  = Math.min(1, Math.max(0, growth / 100));
+
+            // 種: 小さな茶色楕円
+            if (g < 0.02) {
+                return `<svg width="10" height="10" viewBox="0 0 10 10">
+                    <ellipse cx="5" cy="7" rx="4" ry="3" fill="#a07040"/>
+                </svg>`;
+            }
+
+            // 葉の色: 健康=深緑 → 徒長=黄白 → ダメージ=視色諪色
+            const leafHue = Math.round(118 - etiolation * 55);
+            const leafSat = Math.round(65  - damage    * 35);
+            const leafLit = Math.round(34  + etiolation * 24 + damage * 8);
+            const leafCol  = `hsl(${leafHue},${leafSat}%,${leafLit}%)`;
+            const darkLeaf = `hsl(${leafHue},${Math.round(leafSat * 0.7)}%,${Math.round(leafLit * 0.65)}%)`;
+            const stemCol  = `hsl(${Math.round(100 - etiolation*30)},${Math.round(55 - damage*25)}%,${Math.round(26 + etiolation*12)}%)`;
+
+            // ステージ別基本対度
+            const si       = g < 0.1 ? 0 : g < 0.3 ? 1 : g < 0.7 ? 2 : 3;
+            const baseStemH  = [10, 20, 32, 26][si];
+            const baseCrownW = [10, 18, 30, 40][si];
+            const baseCrownH = [ 7, 12, 19, 26][si];
+            const baseStemW  = [ 2,  3,  4,  5][si];
+
+            // 徒長効果: 茎が伸び階が細くなり、冠部が小さくなる
+            const stemH  = Math.round(baseStemH  * (1 + etiolation * 0.7));
+            const crownW = Math.round(baseCrownW * (1 - etiolation * 0.35));
+            const crownH = Math.round(baseCrownH * (1 - etiolation * 0.40));
+            const stemW  = Math.max(1, Math.round(baseStemW * (1 - etiolation * 0.4)));
+
+            const totalW = crownW + 4;
+            const totalH = stemH  + crownH + 4;
+            const cx = totalW / 2;
+            const cy = crownH / 2 + 2;
+
+            let crownShape;
+            if (si === 3) {
+                // 成熟期: ロゼット形—複数の楕円でレタスらしさを表現
+                crownShape = `
+                    <ellipse cx="${cx}" cy="${cy}" rx="${crownW/2}" ry="${crownH/2}" fill="${leafCol}"/>
+                    <ellipse cx="${cx - crownW*0.2}" cy="${cy - crownH*0.15}" rx="${crownW*0.30}" ry="${crownH*0.45}" fill="${darkLeaf}" opacity="0.45"/>
+                    <ellipse cx="${cx + crownW*0.2}" cy="${cy - crownH*0.15}" rx="${crownW*0.30}" ry="${crownH*0.45}" fill="${darkLeaf}" opacity="0.45"/>
+                    <ellipse cx="${cx}" cy="${cy + crownH*0.1}" rx="${crownW*0.25}" ry="${crownH*0.32}" fill="${leafCol}" opacity="0.8"/>`;
+            } else if (si >= 1) {
+                // 幼苗期/生育期: ⋑葉の陰影で立体感
+                crownShape = `
+                    <ellipse cx="${cx}" cy="${cy}" rx="${crownW/2}" ry="${crownH/2}" fill="${leafCol}"/>
+                    <ellipse cx="${cx}" cy="${cy + 2}" rx="${crownW*0.38}" ry="${crownH*0.33}" fill="${darkLeaf}" opacity="0.38"/>`;
+            } else {
+                // 発芽期: 丸い子葉
+                crownShape = `<ellipse cx="${cx}" cy="${cy}" rx="${crownW/2}" ry="${crownH/2}" fill="${leafCol}"/>`;
+            }
+
+            return `<svg width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}" style="overflow:visible;display:block">
+                ${crownShape}
+                <rect x="${cx - stemW/2}" y="${cy + crownH/2 - 1}" width="${stemW}" height="${stemH + 2}" rx="1" fill="${stemCol}"/>
+            </svg>`;
+        }
+
         function render() {
             document.getElementById('sensor-temp').innerText = state.temp.toFixed(1);
             document.getElementById('sensor-ec').innerText = state.ec.toFixed(2);
             document.getElementById('sensor-light').innerText = Math.round(state.light);
-            document.getElementById('growth-bar').style.width = `${state.growth}%`;
             document.getElementById('sensor-humid').innerText = state.humid.toFixed(1);
             document.getElementById('damage-bar').style.width = `${(state.damage * 100).toFixed(1)}%`;
+            document.getElementById('etiolation-bar').style.width = `${(state.etiolation * 100).toFixed(1)}%`;
             document.getElementById('sensor-water').innerText = state.waterLevel.toFixed(2);
 
+            // --- ステージタイムライン ---
+            const si = state.growth < 10 ? 0 : state.growth < 30 ? 1 : state.growth < 70 ? 2 : 3;
+            // カーソル位置 (0〜100%) ― 右端ぎりぎりを避けるため99%でキャップ
+            const cursor = document.getElementById('stage-cursor');
+            if (cursor) cursor.style.left = `${Math.min(99, state.growth)}%`;
+            // 現在ステージを明るく、他を暗く
+            ['ss0','ss1','ss2','ss3'].forEach((id, idx) => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('dim', idx !== si);
+            });
+            document.getElementById('sensor-stage').innerText = STAGE_NAMES[si];
+            const reqEl = document.getElementById('stage-req');
+            if (reqEl) reqEl.textContent = `💡 ${STAGE_MIN_LIGHT[si]}lx | 🌡️ ${STAGE_OPT_TEMP[si]}°C`;
+            const growPct = document.getElementById('sens-growth-pct');
+            if (growPct) growPct.textContent = `${state.growth.toFixed(1)}%`;
+            // 光量不足警告
+            const lightWarn = document.getElementById('light-warn');
+            if (lightWarn) lightWarn.classList.toggle('hidden', state.light >= STAGE_MIN_LIGHT[si]);
+
+            // --- LED インジケーター ---
             const ledT = document.getElementById('led-top');
             const ledM = document.getElementById('led-mid');
             if (state.ledActive) {
@@ -734,34 +870,27 @@
                 ledM.classList.remove('led-active');
             }
 
-            // ショーケースの明暗: 自然光 + LED を合算した総光量で制御
-            // 屋内想定ピーク(LED含む) ~20000lx を上限として 0〜1 に正規化
+            // --- ショーケース明暗オーバーレイ ---
             const lightRatio = Math.min(1, state.light / 20000);
             const overlay = document.getElementById('light-overlay');
             if (overlay) {
-                // 昼は暖色の陽光、LED点灯時は白寄り
-                const hue  = state.ledActive ? 60 : 45;   // LED=白寄り / 太陽=暖色
+                const hue   = state.ledActive ? 60 : 45;
                 const alpha = (lightRatio * 0.55).toFixed(3);
                 overlay.style.background = `hsla(${hue}, 100%, 95%, ${alpha})`;
             }
 
+            // --- ショーケース植物 (CSS SVG) ---
             const waterHeight = Math.max(0, 8 + state.waterLevel * 2) + Math.sin(Date.now() / 1000) * 1.5;
             const ecColor = `rgba(56, ${Math.max(120, 255 - state.ec * 60)}, 248, 0.4)`;
-            for(let i=1; i<=6; i++) {
+            const plantSVG = makePlantSVG(state.growth, state.etiolation, state.damage);
+            for (let i = 1; i <= 6; i++) {
                 const w = document.getElementById(`water-${i}`);
                 if (w) {
                     w.style.height = `${waterHeight}px`;
                     w.style.backgroundColor = ecColor;
                 }
                 const p = document.getElementById(`p${i}`);
-                if (p) {
-                    const scale = 0.5 + (state.growth / 100);
-                    p.style.transform = `scale(${scale})`;
-                    if (state.damage > 0.7) p.innerText = "🍂";
-                    else if (state.growth > 80) p.innerText = "🥬";
-                    else if (state.growth > 30) p.innerText = "🌱";
-                    else p.innerText = "🔹";
-                }
+                if (p) p.innerHTML = plantSVG;
             }
         }
 
@@ -840,11 +969,14 @@
             state.humid  = 55.0;
             state.damage = 0;
             state.waterLevel = 0;
-            state.ledActive  = false;
+            state.ledActive     = false;
             state.ledManualMode = false;
+            state.etiolation    = 0;
+            state.stageName     = '発芽期';
             lettuce.state.growth     = 0;
             lettuce.state.damage     = 0;
             lettuce.state.waterLevel = 0;
+            lettuce.state.etiolation = 0;
             weatherIndex = 0;
             simAccum     = 0;
             state.sunLux = 0;
