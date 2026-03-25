@@ -329,7 +329,7 @@
         let weatherData  = [];  // generateMonthData() の結果 (30日×24時間)
         let weatherIndex = 0;   // 現在の時間インデックス
         let simAccum     = 0;   // 蓄積経過（シミュレーション時間・時間単位）
-        let simSpeed     = 0;   // 速度: 1 = 1時間/実秒 (0=停止)
+        let simSpeed     = 0;   // 速度: 単位は時間/実秒 (0=停止, 最大6=6時間/実秒)
 
         let state = {
             temp: 22.0,
@@ -592,30 +592,26 @@
 
         // --- 速度・天候制御 ---
         function updateSpeed(val) {
-            simSpeed = val / 100; // 0〜1 (1 = 1時間/実秒)
+            // スライダー 0〜100 を 0〜6 時間/実秒 にマッピング
+            simSpeed = (val / 100) * 6;
             const label = document.getElementById('speed-label');
             if (val == 0) {
                 label.textContent = '停止中';
-            } else {
-                const secPerHour = (100 / val).toFixed(1);
+            } else if (simSpeed < 1) {
+                const secPerHour = (1 / simSpeed).toFixed(1);
                 label.textContent = `1時間 = ${secPerHour}秒`;
+            } else {
+                label.textContent = `1秒 = ${simSpeed.toFixed(1)}時間`;
             }
         }
 
         function changeMonth(month) {
             const m = parseInt(month);
-            weatherData  = weather.generateMonthData(m, sunSettings);
-            weatherIndex = 0;
-            simAccum     = 0;
-            lettuce.state.growth     = 0;
-            lettuce.state.damage     = 0;
-            lettuce.state.waterLevel = 0;
-            state.growth     = 0;
-            state.damage     = 0;
-            state.waterLevel = 0;
-            state.sunLux = 0;
-            document.getElementById('sim-clock').textContent = 'Day 1 - 00:00';
-            addLog(`${m}月のデータで再起動しました。`, "success");
+            // まずシミュレータをフルリセット
+            resetSim();
+            // 指定月の天候データで再生成
+            weatherData = weather.generateMonthData(m, sunSettings);
+            addLog(`${m}月のデータでシミュレーターを再起動しました。`, "success");
         }
 
         function initWeather(month) {
