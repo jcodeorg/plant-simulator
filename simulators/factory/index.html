@@ -415,9 +415,12 @@
             damage: 0,
             waterLevel: 0,
             ledActive: false,
+            ledManualMode: false,   // true=手動操作中（天候スケジュール上書き禁止）
             isProgramRunning: false,
             lastTick: Date.now()
         };
+
+        const LED_LUX = 8000;  // LED 加算光量 (lx)
 
         // 太陽設定（UIで変更可）
         let sunSettings = {
@@ -520,9 +523,10 @@
 
         // --- 手動操作 ---
         function manualLED(on) {
+            state.ledManualMode = true;
             state.ledActive = on;
-            state.light = state.sunLux + (on ? 15000 : 0);
-            addLog(`手動: LED ${on ? 'ON' : 'OFF'}`, on ? 'success' : 'info');
+            state.light = state.sunLux + (on ? LED_LUX : 0);
+            addLog(`手動: LED ${on ? 'ON (+' + LED_LUX + ' lx)' : 'OFF'}`, on ? 'success' : 'info');
         }
         function manualPump() {
             state.ec = Math.min(3.0, state.ec + 0.1);
@@ -600,16 +604,20 @@
             `;
         }
 
-        function updateCharts() {
+        // 1シミュレーション時間ごとにデータを追記（whileループ内で呼ぶ）
+        function pushChartData() {
             pushChart('temp',   state.temp);
             pushChart('humid',  state.humid);
-            pushChart('light',  state.sunLux);
+            pushChart('light',  state.light);   // 総合光量(太陽光+LED)
             pushChart('growth', state.growth);
             pushChart('damage', state.damage * 100);
+        }
 
+        // 毎フレーム描画のみ行う（pushChartDataとは分離）
+        function drawCharts() {
             drawChart('chart-temp',   chartData.temp,   '#3b82f6', -5,  40);
             drawChart('chart-humid',  chartData.humid,  '#0ea5e9',  0, 100);
-            drawChart('chart-light',  chartData.light,  '#f59e0b',  0, 5000);
+            drawChart('chart-light',  chartData.light,  '#f59e0b',  0, sunSettings.peakLux + LED_LUX);
             drawChart('chart-growth', chartData.growth, '#22c55e',  0, 100, chartData.damage, '#f43f5e');
         }
 
@@ -645,10 +653,13 @@
                     if (state.isProgramRunning) {
                         const rootBlocks = document.getElementById('workspace').children;
                         executeBlockList(rootBlocks);
+                    } else if (!state.ledManualMode) {
+                        // 手動モードでない場合は天候スケジュールに従う
+                        state.ledActive = w.lux > 0;
                     }
 
-                    // 総合光量は太陽光 + LED
-                    state.light = state.sunLux + (state.ledActive ? 15000 : 0);
+                    // 総合光量 = 太陽光 + LED
+                    state.light = state.sunLux + (state.ledActive ? LED_LUX : 0);
 
                     // 水位が極端に低い場合の緊急補水
                     if (lettuce.state.waterLevel < -4.0) {
@@ -674,6 +685,8 @@
                     }
 
                     weatherIndex++;
+                    // 1シミュレーション時間ごとに1点だけ記録（速度に依存しない）
+                    pushChartData();
                 }
 
                 // シミュレーション時計を更新
@@ -690,20 +703,22 @@
                 state.temp   = dw.temp;
                 state.humid  = dw.humidity;
                 state.sunLux = dw.lux;
-                // 制御ブロックが停止中なら天候スケジュールでLEDを反映
-                if (!state.isProgramRunning) state.ledActive = dw.lux > 0;
-                state.light = state.sunLux + (state.ledActive ? 15000 : 0);
+                // 手動モード局外、かつ制御ブロック局外のときのみ天候スケジュールでLEDを制御
+                if (!state.ledManualMode && !state.isProgramRunning) {
+                    state.ledActive = dw.lux > 0;
+                }
+                state.light = state.sunLux + (state.ledActive ? LED_LUX : 0);
             }
 
             render();
-            updateCharts();
+            drawCharts();   // 描画のみ（データ追記はwhileループ内で実施済み）
             requestAnimationFrame(coreLoop);
         }
 
         function render() {
             document.getElementById('sensor-temp').innerText = state.temp.toFixed(1);
             document.getElementById('sensor-ec').innerText = state.ec.toFixed(2);
-            document.getElementById('sensor-light').innerText = Math.round(state.sunLux);
+            document.getElementById('sensor-light').innerText = Math.round(state.light);
             document.getElementById('growth-bar').style.width = `${state.growth}%`;
             document.getElementById('sensor-humid').innerText = state.humid.toFixed(1);
             document.getElementById('damage-bar').style.width = `${(state.damage * 100).toFixed(1)}%`;
@@ -826,6 +841,7 @@
             state.damage = 0;
             state.waterLevel = 0;
             state.ledActive  = false;
+            state.ledManualMode = false;
             lettuce.state.growth     = 0;
             lettuce.state.damage     = 0;
             lettuce.state.waterLevel = 0;
