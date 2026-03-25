@@ -598,6 +598,9 @@
         let simStats = { maxGrowth: 0, ledOnHours: 0, totalHours: 0, ledCostAcc: 0 };
         let csvLog   = []; // 時間ごとの観測記録 + マニュアルイベント
 
+        // ストレス要因の累積値 (各要因 /h を毎時間加算)
+        let stressCumul = { env: 0, water: 0, etiol: 0, tipburn: 0, recovery: 0 };
+
         // LED電気代: 8000lx = 2.4円/h を基準に光量比例
 
         // ステージ別パラメータ (PlantSimulatorと同期)
@@ -885,6 +888,13 @@
                     state.etiolation = simStatus.etiolation;
                     state.stageName  = simStatus.stageName;
                     state.stressBreakdown = simStatus.stressBreakdown;
+                    // ストレス要因を累積
+                    const sbr = simStatus.stressBreakdown;
+                    stressCumul.env      += sbr.env;
+                    stressCumul.water    += sbr.water;
+                    stressCumul.etiol    += sbr.etiol;
+                    stressCumul.tipburn  += sbr.tipburn;
+                    stressCumul.recovery += sbr.recovery;
                     // 統計更新
                     simStats.totalHours++;
                     if (state.ledActive) {
@@ -1022,36 +1032,49 @@
             const sb = state.stressBreakdown;
             const sbEl = document.getElementById('stress-breakdown');
             if (sbEl && sb) {
-                const pDay = v => (v * 24 * 100).toFixed(2);  // /h → %/日
-                // スケール: 0.003/h (日毎7.2%のストレス) = バー100%
+                const pDay  = v => (v * 24 * 100).toFixed(2);   // /h → %/日
+                const pCum  = v => (v * 100).toFixed(1);         // 累積/h合計 → %
                 const barPct = v => Math.min(100, Math.max(0, v) / 0.003 * 100).toFixed(0);
                 const mkBar = (v, cls) =>
                     `<div class="flex-1 bg-slate-100 rounded-full h-1.5"><div class="h-1.5 rounded-full ${cls} transition-all" style="width:${barPct(v)}%"></div></div>`;
-                const mkRow = (icon, label, v, cls, tip) => {
-                    const on = v > 1e-6;
-                    return `<div class="flex items-center gap-1.5 ${on ? '' : 'opacity-30'}" title="${tip}">
-                        <span class="text-base w-5 text-center">${icon}</span>
-                        <span class="text-[10px] w-[72px] text-slate-600 shrink-0">${label}</span>
-                        ${mkBar(v, cls)}
-                        <span class="text-[10px] font-mono w-[58px] text-right ${on ? 'text-rose-600 font-semibold' : 'text-slate-300'}">${on ? '+'+pDay(v)+'%/日' : '—'}</span>
-                    </div>`;
+                const mkRow = (icon, label, v, cumV, cls, tip) => {
+                    const on = v > 1e-6 || cumV > 1e-4;
+                    const dayStr  = v > 1e-6 ? `+${pDay(v)}/日` : '—';
+                    const cumStr  = cumV > 1e-4 ? `(累${pCum(cumV)}%)` : '';
+                    return `<div class="flex items-center gap-1.5 ${on ? '' : 'opacity-30'}" title="${tip}">` +
+                        `<span class="text-base w-5 text-center shrink-0">${icon}</span>` +
+                        `<span class="text-[10px] w-[60px] text-slate-600 shrink-0">${label}</span>` +
+                        mkBar(v, cls) +
+                        `<span class="text-[10px] font-mono w-[52px] text-right shrink-0 ${v > 1e-6 ? 'text-rose-600 font-semibold' : 'text-slate-300'}">${dayStr}</span>` +
+                        `<span class="text-[10px] font-mono w-[58px] text-right shrink-0 ${cumV > 1e-4 ? 'text-slate-400' : 'text-slate-200'}">${cumStr}</span>` +
+                    `</div>`;
                 };
                 const netPos = (sb.net || 0) > 1e-6;
+                const recDay = pDay(sb.recovery || 0.001);
+                const recCum = pCum(stressCumul.recovery);
                 sbEl.innerHTML =
-                    mkRow('🌡️', '高温・湿度', sb.env,     'bg-orange-400', '気温 > 26°C、または湿度が適準巤するとダメージが発生') +
-                    mkRow('💧', '水分不足',   sb.water,   'bg-blue-400',   '水位が下がりすぎると蓄積し、水切れは致命的') +
-                    mkRow('🌿', '徒長',         sb.etiol,   'bg-yellow-500', '光量不足で茎が徒長すると品質が低下') +
-                    mkRow('🍂', 'チップバーン', sb.tipburn, 'bg-red-400',    '高光・高温時にカルシウム不足で発生') +
-                    `<div class="flex items-center gap-1.5 mt-1 pt-1 border-t border-slate-100">
-                        <span class="text-base w-5 text-center">💚</span>
-                        <span class="text-[10px] w-[72px] text-emerald-600 shrink-0">自然回復</span>
-                        <div class="flex-1"></div>
-                        <span class="text-[10px] font-mono w-[58px] text-right text-emerald-600 font-semibold">−${pDay(sb.recovery || 0.001)}%/日</span>
-                    </div>` +
-                    `<div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-200 font-bold text-[11px] ${netPos ? 'text-rose-600' : 'text-emerald-600'}">
-                        <span>${netPos ? '⚠️ ダメージ悪化中' : '✅ 回復中 / 安定'}</span>
-                        <span class="font-mono">${netPos ? '+' : ''}${pDay(sb.net || 0)}%/日</span>
-                    </div>`;
+                    `<div class="flex text-[9px] text-slate-400 mb-1 gap-1.5">` +
+                        `<span class="w-5 shrink-0"></span>` +
+                        `<span class="w-[60px] shrink-0"></span>` +
+                        `<div class="flex-1"></div>` +
+                        `<span class="w-[52px] text-right shrink-0">現在/日</span>` +
+                        `<span class="w-[58px] text-right shrink-0">累積</span>` +
+                    `</div>` +
+                    mkRow('🌡️', '高温・湿度', sb.env,     stressCumul.env,     'bg-orange-400', '気温 > 26°C、または湿度が適正外れるとダメージが発生') +
+                    mkRow('💧', '水分不足',   sb.water,   stressCumul.water,   'bg-blue-400',   '水位が下がりすぎると蓄積し、水切れは致命的') +
+                    mkRow('🌿', '徒長',       sb.etiol,   stressCumul.etiol,   'bg-yellow-500', '光量不足で茎が徒長すると品質が低下') +
+                    mkRow('🍂', 'チップバーン', sb.tipburn, stressCumul.tipburn, 'bg-red-400',    '高光・高温時にカルシウム不足で発生') +
+                    `<div class="flex items-center gap-1.5 mt-1 pt-1 border-t border-slate-100">` +
+                        `<span class="text-base w-5 text-center shrink-0">💚</span>` +
+                        `<span class="text-[10px] w-[60px] text-emerald-600 shrink-0">自然回復</span>` +
+                        `<div class="flex-1"></div>` +
+                        `<span class="text-[10px] font-mono w-[52px] text-right shrink-0 text-emerald-600 font-semibold">−${recDay}/日</span>` +
+                        `<span class="text-[10px] font-mono w-[58px] text-right shrink-0 text-emerald-500">(累${recCum}%)</span>` +
+                    `</div>` +
+                    `<div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-200 font-bold text-[11px] ${netPos ? 'text-rose-600' : 'text-emerald-600'}">` +
+                        `<span>${netPos ? '⚠️ ダメージ悪化中' : '✅ 回復中 / 安定'}</span>` +
+                        `<span class="font-mono">${netPos ? '+' : ''}${pDay(sb.net || 0)}%/日　現在 ${(state.damage * 100).toFixed(1)}%</span>` +
+                    `</div>`;
             }
 
             // --- ステージタイムライン ---
@@ -1344,7 +1367,7 @@
             state.simFinished = false;
             simStats = { maxGrowth: 0, ledOnHours: 0, totalHours: 0, ledCostAcc: 0 };
             csvLog   = [];
-            state.temp   = 22.0;
+            stressCumul = { env: 0, water: 0, etiol: 0, tipburn: 0, recovery: 0 };
             state.ec     = 1.2;
             state.growth = 0;
             state.humid  = 55.0;
