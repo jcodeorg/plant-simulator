@@ -143,6 +143,22 @@
         .log-panel { font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; }
         .slot-highlight { background-color: rgba(255, 255, 255, 0.5) !important; border: 1px solid white !important; }
         .py-keyword { color: #f8fafc; font-family: monospace; font-weight: bold; }
+
+        /* タブ */
+        .tab-btn { padding: 6px 18px; border-radius: 9999px; font-size: 13px; font-weight: 700;
+                   cursor: pointer; transition: background 0.15s, color 0.15s; border: none; }
+        .tab-btn.active   { background: #1e293b; color: #fff; }
+        .tab-btn.inactive { background: #f1f5f9; color: #64748b; }
+        .tab-btn.inactive:hover { background: #e2e8f0; }
+
+        /* 手動ボタン */
+        .manual-btn { display: flex; flex-direction: column; align-items: center; justify-content: center;
+                      gap: 2px; padding: 10px 0; border-radius: 12px; border: 2px solid;
+                      font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; width: 100%; }
+
+        /* グラフ */
+        .chart-wrap { position: relative; width: 100%; }
+        .chart-label { font-size: 10px; fill: #94a3b8; }
     </style>
 </head>
 <body class="p-4 bg-slate-100">
@@ -253,68 +269,120 @@
             </div>
         </div>
 
-        <!-- 右側：プログラミング -->
+        <!-- 右側：制御ロジック -->
         <div class="lg:col-span-7 space-y-4">
-            <div class="bg-white p-5 rounded-2xl shadow-lg border border-slate-200 flex flex-col h-full">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-slate-800">🧩 制御ロジック (Short Syntax)</h2>
+            <div class="bg-white p-5 rounded-2xl shadow-lg border border-slate-200 flex flex-col">
+
+                <!-- ヘッダー: タブ + リセット -->
+                <div class="flex items-center justify-between mb-4">
                     <div class="flex gap-2">
-                        <button id="btn-run" onclick="toggleProgram()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-full font-bold shadow-md transition flex items-center">
-                            <span id="run-icon" class="mr-2">▶</span> <span id="run-text">プログラム実行</span>
+                        <button id="tab-manual" class="tab-btn active" onclick="switchTab('manual')">&#128075; 手動</button>
+                        <button id="tab-auto"   class="tab-btn inactive" onclick="switchTab('auto')">&#129520; 自動</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="btn-run" onclick="toggleProgram()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-full font-bold shadow-md transition text-sm flex items-center">
+                            <span id="run-icon" class="mr-1">▶</span><span id="run-text">自動実行</span>
                         </button>
-                        <button onclick="resetSim()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2 rounded-full font-bold transition">リセット</button>
+                        <button onclick="resetSim()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-full font-bold transition text-sm">リセット</button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-12 gap-4">
-                    <div class="col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200 block-container">
-                        <p class="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Code Blocks</p>
-                        
-                        <!-- 条件ブロック -->
-                        <div class="block block-if text-white rounded shadow-sm overflow-hidden mb-4" draggable="true" data-type="custom_if_else">
-                            <div class="delete-btn" title="Delete block">✕</div>
-                            <div class="p-2 bg-orange-500 flex items-center gap-1 flex-wrap pr-8">
-                                <span class="py-keyword">if</span>
-                                <select class="block-input sensor-select">
-                                    <option value="light">light</option>
-                                    <option value="temp">temp</option>
-                                    <option value="ec">ec</option>
-                                </select>
-                                <select class="block-input operator-select">
-                                    <option value="lt">&lt;</option>
-                                    <option value="gt">&gt;</option>
-                                    <option value="eq">==</option>
-                                </select>
-                                <input type="number" class="block-input value-input" value="5000" step="100">
-                                <span class="py-keyword">:</span>
-                            </div>
-                            <div class="slot" data-role="then"></div>
-                            <div class="p-1 bg-orange-600 px-2 flex items-center">
-                                <span class="py-keyword text-xs">else:</span>
-                            </div>
-                            <div class="slot" data-role="else"></div>
-                        </div>
-
-                        <!-- アクションブロック -->
-                        <div class="block block-action rounded" draggable="true" data-type="led_on">
-                            <div class="delete-btn" title="Delete block">✕</div>
-                            led_on()
-                        </div>
-                        <div class="block block-action rounded" draggable="true" data-type="led_off">
-                            <div class="delete-btn" title="Delete block">✕</div>
-                            led_off()
-                        </div>
-                        <div class="block block-action block-nutrient rounded" draggable="true" data-type="add_fertilizer">
-                            <div class="delete-btn" title="Delete block">✕</div>
-                            add_fertilizer()
-                        </div>
+                <!-- 手動タブ -->
+                <div id="panel-manual">
+                    <!-- 手動操作ボタン -->
+                    <div class="grid grid-cols-4 gap-3 mb-4">
+                        <button class="manual-btn border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+                                onclick="manualLED(true)">
+                            <span class="text-xl">💡</span>LED ON
+                        </button>
+                        <button class="manual-btn border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                onclick="manualLED(false)">
+                            <span class="text-xl">⚫</span>LED OFF
+                        </button>
+                        <button class="manual-btn border-sky-400 bg-sky-50 text-sky-700 hover:bg-sky-100"
+                                onclick="manualPump()">
+                            <span class="text-xl">💧</span>ポンプ
+                        </button>
+                        <button class="manual-btn border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100"
+                                onclick="manualAddWater()">
+                            <span class="text-xl">🚰</span>足し水
+                        </button>
                     </div>
 
-                    <div class="col-span-7">
-                        <div id="workspace" class="drop-zone p-4 overflow-auto max-h-[500px] font-mono"></div>
-                        <p class="text-[10px] text-slate-400 mt-2">※ブロックをドラッグして条件を組み立ててください。</p>
+                    <!-- グラフエリア -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">🌡️ 気温 (°C)</p>
+                            <div class="chart-wrap"><svg id="chart-temp" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">💧 湿度 (%)</p>
+                            <div class="chart-wrap"><svg id="chart-humid" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">☀️ 光量 (lx)</p>
+                            <div class="chart-wrap"><svg id="chart-light" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">🌱 成長率 / ダメージ</p>
+                            <div class="chart-wrap"><svg id="chart-growth" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- 自動タブ -->
+                <div id="panel-auto" style="display:none">
+                    <div class="grid grid-cols-12 gap-4">
+                        <div class="col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200 block-container">
+                            <p class="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Code Blocks</p>
+                            
+                            <!-- 条件ブロック -->
+                            <div class="block block-if text-white rounded shadow-sm overflow-hidden mb-4" draggable="true" data-type="custom_if_else">
+                                <div class="delete-btn" title="Delete block">✕</div>
+                                <div class="p-2 bg-orange-500 flex items-center gap-1 flex-wrap pr-8">
+                                    <span class="py-keyword">if</span>
+                                    <select class="block-input sensor-select">
+                                        <option value="light">light</option>
+                                        <option value="temp">temp</option>
+                                        <option value="ec">ec</option>
+                                    </select>
+                                    <select class="block-input operator-select">
+                                        <option value="lt">&lt;</option>
+                                        <option value="gt">&gt;</option>
+                                        <option value="eq">==</option>
+                                    </select>
+                                    <input type="number" class="block-input value-input" value="5000" step="100">
+                                    <span class="py-keyword">:</span>
+                                </div>
+                                <div class="slot" data-role="then"></div>
+                                <div class="p-1 bg-orange-600 px-2 flex items-center">
+                                    <span class="py-keyword text-xs">else:</span>
+                                </div>
+                                <div class="slot" data-role="else"></div>
+                            </div>
+
+                            <!-- アクションブロック -->
+                            <div class="block block-action rounded" draggable="true" data-type="led_on">
+                                <div class="delete-btn" title="Delete block">✕</div>
+                                led_on()
+                            </div>
+                            <div class="block block-action rounded" draggable="true" data-type="led_off">
+                                <div class="delete-btn" title="Delete block">✕</div>
+                                led_off()
+                            </div>
+                            <div class="block block-action block-nutrient rounded" draggable="true" data-type="add_fertilizer">
+                                <div class="delete-btn" title="Delete block">✕</div>
+                                add_fertilizer()
+                            </div>
+                        </div>
+
+                        <div class="col-span-7">
+                            <div id="workspace" class="drop-zone p-4 overflow-auto max-h-[500px] font-mono"></div>
+                            <p class="text-[10px] text-slate-400 mt-2">※ブロックをドラッグして条件を組み立ててください。</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -438,10 +506,95 @@
 
         function applyAction(type) {
             switch(type) {
-                case 'led_on': state.ledActive = true; break;
+                case 'led_on':  state.ledActive = true;  break;
                 case 'led_off': state.ledActive = false; break;
                 case 'add_fertilizer': state.ec = Math.min(3.0, state.ec + 0.02); break;
             }
+        }
+
+        // --- 手動操作 ---
+        function manualLED(on) {
+            state.ledActive = on;
+            state.light = state.sunLux + (on ? 15000 : 0);
+            addLog(`手動: LED ${on ? 'ON' : 'OFF'}`, on ? 'success' : 'info');
+        }
+        function manualPump() {
+            state.ec = Math.min(3.0, state.ec + 0.1);
+            addLog('手動: ポンプ起動 (EC +0.1)', 'info');
+        }
+        function manualAddWater() {
+            lettuce.addWater(2.0);
+            state.waterLevel = lettuce.state.waterLevel;
+            addLog('手動: 足し水 +2cm', 'info');
+        }
+
+        // --- タブ切り替え ---
+        function switchTab(tab) {
+            const isManual = tab === 'manual';
+            document.getElementById('panel-manual').style.display = isManual ? '' : 'none';
+            document.getElementById('panel-auto').style.display   = isManual ? 'none' : '';
+            document.getElementById('tab-manual').className = 'tab-btn ' + (isManual ? 'active' : 'inactive');
+            document.getElementById('tab-auto').className   = 'tab-btn ' + (isManual ? 'inactive' : 'active');
+            // 自動タブに切り替えたときは自動実行ボタンのテキストを更新
+            if (!isManual && !state.isProgramRunning) {
+                document.getElementById('run-text').innerText = '自動実行';
+                document.getElementById('run-icon').innerText = '▶';
+            }
+        }
+
+        // --- グラフ描画 ---
+        const CHART_LEN = 120; // 保持点数
+        const chartData = {
+            temp:   [],
+            humid:  [],
+            light:  [],
+            growth: [],
+            damage: []
+        };
+
+        function pushChart(key, val) {
+            chartData[key].push(val);
+            if (chartData[key].length > CHART_LEN) chartData[key].shift();
+        }
+
+        function drawChart(svgId, values, color, min, max, values2, color2) {
+            const svg = document.getElementById(svgId);
+            if (!svg || values.length < 2) return;
+            const W = 300, H = 80, PAD = 4;
+            const range = max - min || 1;
+            const pts = (arr) => arr.map((v, i) => {
+                const x = PAD + (i / (CHART_LEN - 1)) * (W - PAD * 2);
+                const y = H - PAD - ((v - min) / range) * (H - PAD * 2);
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+
+            // 最新値テキスト
+            const last = values[values.length - 1];
+            const dispVal = max > 1000 ? Math.round(last) : last.toFixed(1);
+
+            let extra = '';
+            if (values2 && values2.length >= 2) {
+                extra = `<polyline points="${pts(values2)}" fill="none" stroke="${color2}" stroke-width="1.5" opacity="0.7"/>`;
+            }
+            svg.innerHTML = `
+                <rect width="300" height="80" rx="4" fill="#f8fafc"/>
+                <polyline points="${pts(values)}" fill="none" stroke="${color}" stroke-width="2"/>
+                ${extra}
+                <text x="${W - PAD}" y="12" text-anchor="end" class="chart-label" font-size="11" fill="${color}">${dispVal}</text>
+            `;
+        }
+
+        function updateCharts() {
+            pushChart('temp',   state.temp);
+            pushChart('humid',  state.humid);
+            pushChart('light',  state.light);
+            pushChart('growth', state.growth);
+            pushChart('damage', state.damage * 100);
+
+            drawChart('chart-temp',   chartData.temp,   '#3b82f6', -5,  40);
+            drawChart('chart-humid',  chartData.humid,  '#0ea5e9',  0, 100);
+            drawChart('chart-light',  chartData.light,  '#f59e0b',  0, 100000);
+            drawChart('chart-growth', chartData.growth, '#22c55e',  0, 100, chartData.damage, '#f43f5e');
         }
 
         // --- メインループ ---
@@ -527,6 +680,7 @@
             }
 
             render();
+            updateCharts();
             requestAnimationFrame(coreLoop);
         }
 
