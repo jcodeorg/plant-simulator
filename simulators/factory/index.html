@@ -205,149 +205,107 @@
                     <div class="shelf"><div class="water-layer" id="water-6"></div><div class="plant-unit" id="p6"></div></div>
                 </div>
 
-                <!-- 環境センサー 2×2 -->
-                <div class="grid grid-cols-2 gap-3 mt-4 text-sm">
-                    <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                        <p class="text-[10px] text-blue-600 font-bold uppercase">Temperature (気温)</p>
-                        <p class="text-lg font-bold text-slate-700"><span id="sensor-temp">24.0</span>°C</p>
+                <!-- シミュレーション制御 -->
+                <div class="mt-3 border-t border-slate-100 pt-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-bold text-slate-700 text-sm">⏱ シミュレーション制御</h3>
+                        <span id="sim-clock" class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">Day 1 - 00:00</span>
                     </div>
-                    <div class="bg-sky-50 p-2 rounded-lg border border-sky-100">
-                        <p class="text-[10px] text-sky-600 font-bold uppercase">Humidity (湿度)</p>
-                        <p class="text-lg font-bold text-slate-700"><span id="sensor-humid">55.0</span>%</p>
+                    <div class="flex gap-2 mb-2">
+                        <button id="btn-start" onclick="startSim()"
+                                class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-full text-sm transition">
+                            ▶︎ 開始
+                        </button>
+                        <button id="btn-pause" onclick="togglePause()" disabled
+                                class="flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed">
+                            ⏸ 一時停止
+                        </button>
                     </div>
-                    <div class="bg-green-50 p-2 rounded-lg border border-green-100">
-                        <p class="text-[10px] text-green-600 font-bold uppercase">EC Value (EC値)</p>
-                        <p class="text-lg font-bold text-slate-700"><span id="sensor-ec">1.2</span> <small>mS/cm</small></p>
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-xs text-slate-400 shrink-0">1h/s</span>
+                        <input type="range" id="speed-slider" min="1" max="24" step="1" value="1"
+                               class="flex-1 accent-emerald-500" oninput="updateSpeed(this.value)">
+                        <span class="text-xs text-slate-400 shrink-0">1日/s</span>
                     </div>
-                    <div class="bg-yellow-50 p-2 rounded-lg border border-yellow-100">
-                        <p class="text-[10px] text-yellow-600 font-bold uppercase">Light / Sensor (太陽光センサ)</p>
-                        <p class="text-lg font-bold text-slate-700"><span id="sensor-light">1200</span> <small>lx</small></p>
-                        <p class="text-[10px] text-slate-400 mt-0.5">出力: <span id="sensor-light-total">1200</span> lx</p>
-                    </div>
-                </div>
-
-                <!-- ステージタイムライン (フル幅) -->
-                <div class="mt-2 bg-slate-50 rounded-xl px-3 pt-2 pb-2 border border-slate-200">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase">🌿 成長ステージ</span>
-                        <span class="text-[10px] text-slate-400" id="stage-req">💡 300lx | 🌡️ 22°C</span>
-                    </div>
-                    <div class="relative">
-                        <div class="stage-track">
-                            <div class="stage-seg dim" id="ss0" style="width:10%;background:#94a3b8;">発芽</div>
-                            <div class="stage-seg dim" id="ss1" style="width:20%;background:#84cc16;">幼苗</div>
-                            <div class="stage-seg dim" id="ss2" style="width:40%;background:#22c55e;">生育</div>
-                            <div class="stage-seg dim" id="ss3" style="width:30%;background:#f59e0b;">成熟</div>
-                        </div>
-                        <div class="stage-cursor" id="stage-cursor" style="left:0%"></div>
-                    </div>
-                    <div class="flex items-center justify-between mt-1.5">
-                        <span class="text-[11px] font-bold text-purple-700" id="sensor-stage">発芽期</span>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs text-slate-500" id="speed-label">1秒 = 1時間</span>
                         <div class="flex items-center gap-2">
-                            <span id="light-warn" class="hidden text-[10px] font-bold text-amber-600">⚠️ 光量不足→徒長</span>
-                            <span class="text-[10px] text-slate-500 font-mono" id="sens-growth-pct">0.0%</span>
+                            <span class="text-xs text-slate-500">月:</span>
+                            <select id="month-select" onchange="changeMonth(this.value)"
+                                    class="text-xs border border-slate-200 rounded px-2 py-1 bg-white">
+                                <optgroup label="屋外">
+                                    <option value="outdoor_1">冬 1月 (屋外)</option>
+                                    <option value="outdoor_4" selected>春 4月 (屋外)</option>
+                                    <option value="outdoor_7">夏 7月 (屋外)</option>
+                                    <option value="outdoor_10">秋 10月 (屋外)</option>
+                                </optgroup>
+                                <optgroup label="屋内">
+                                    <option value="indoor_1">冬 1月 (屋内)</option>
+                                    <option value="indoor_4">春 4月 (屋内)</option>
+                                    <option value="indoor_7">夏 7月 (屋内)</option>
+                                    <option value="indoor_10">秋 10月 (屋内)</option>
+                                </optgroup>
+                            </select>
                         </div>
                     </div>
-                </div>
-
-                <!-- 植物ステータス: ダメージ・徒長・水位 -->
-                <div class="grid grid-cols-3 gap-2 mt-2 text-sm">
-                    <div class="bg-rose-50 p-2 rounded-lg border border-rose-100">
-                        <p class="text-[10px] text-rose-600 font-bold uppercase">Damage (ダメージ)</p>
-                        <div class="w-full bg-rose-200 rounded-full h-2 mt-2">
-                            <div id="damage-bar" class="bg-rose-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                    <div class="grid grid-cols-3 gap-2 text-xs mb-2">
+                        <div class="flex flex-col">
+                            <label class="text-slate-500">日の出 (hour)</label>
+                            <input id="sunrise-input" type="number" min="0" max="23" value="6" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-slate-500">日の入り (hour)</label>
+                            <input id="sunset-input" type="number" min="0" max="23" value="18" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-slate-500">ピーク照度 (lux)</label>
+                            <input id="peak-input" type="number" min="0" step="1000" value="5000" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
                         </div>
                     </div>
-                    <div class="bg-amber-50 p-2 rounded-lg border border-amber-100">
-                        <p class="text-[10px] text-amber-600 font-bold uppercase">Etiolation (徒長)</p>
-                        <div class="w-full bg-amber-200 rounded-full h-2 mt-2">
-                            <div id="etiolation-bar" class="bg-amber-500 h-2 rounded-full transition-all" style="width: 0%"></div>
-                        </div>
+                    <div class="flex items-center justify-between bg-yellow-50 rounded-lg px-3 py-1.5 border border-yellow-100">
+                        <span class="text-xs text-yellow-700">⚡ LED電気代（累積）</span>
+                        <span id="cost-realtime" class="text-xs font-bold text-yellow-800">0.0円</span>
                     </div>
-                    <div class="bg-teal-50 p-2 rounded-lg border border-teal-100">
-                        <p class="text-[10px] text-teal-600 font-bold uppercase">Water Level (水位差)</p>
-                        <p class="text-lg font-bold text-slate-700"><span id="sensor-water">0.00</span> cm</p>
-                    </div>
-                </div>
-                <!-- エネルギー蓄積バー -->
-                <div class="mt-2 bg-lime-50 border border-lime-200 rounded-lg px-3 py-2 flex items-center gap-3">
-                    <span class="text-[10px] font-bold text-lime-700 shrink-0">⚡ エネルギー蓄積</span>
-                    <div class="flex-1 bg-lime-200 rounded-full h-2">
-                        <div id="storage-bar" class="bg-lime-500 h-2 rounded-full transition-all" style="width: 0%"></div>
-                    </div>
-                    <span id="storage-val" class="text-[10px] font-mono text-lime-800 shrink-0 w-[36px] text-right">0%</span>
-                    <span id="storage-status" class="text-[10px] font-bold shrink-0"></span>
-                </div>
-
-                <!-- ダメージ原因内訳 -->
-                <div class="mt-2 bg-white border border-slate-200 rounded-xl p-3">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">📊 ダメージ原因内訳 <span class="normal-case font-normal text-slate-400">(現在時間あたり)</span></p>
-                    <div id="stress-breakdown" class="space-y-1.5"></div>
-                </div>
-            </div>
-
-            <!-- シミュレーション速度制御 -->
-            <div class="bg-white p-4 rounded-2xl shadow-lg border border-slate-200">
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="font-bold text-slate-700 text-sm">⏱ シミュレーション制御</h3>
-                    <span id="sim-clock" class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">Day 1 - 00:00</span>
-                </div>
-                <!-- 開始 / 一時停止・再開ボタン -->
-                <div class="flex gap-2 mb-3">
-                    <button id="btn-start" onclick="startSim()"
-                            class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-full text-sm transition">
-                        ▶︎ 開始
-                    </button>
-                    <button id="btn-pause" onclick="togglePause()" disabled
-                            class="flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed">
-                        ⏸ 一時停止
-                    </button>
-                </div>
-                <!-- 速度スライダー -->
-                <div class="flex items-center gap-3">
-                    <span class="text-xs text-slate-400 shrink-0">1h/s</span>
-                    <input type="range" id="speed-slider" min="1" max="24" step="1" value="1"
-                           class="flex-1 accent-emerald-500" oninput="updateSpeed(this.value)">
-                    <span class="text-xs text-slate-400 shrink-0">1日/s</span>
-                </div>
-                <div class="flex items-center justify-between mt-1">
-                    <span class="text-xs text-slate-500" id="speed-label">1秒 = 1時間</span>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-500">月:</span>
-                        <select id="month-select" onchange="changeMonth(this.value)"
-                                class="text-xs border border-slate-200 rounded px-2 py-1 bg-white">
-                            <optgroup label="屋外">
-                                <option value="outdoor_1">冬 1月 (屋外)</option>
-                                <option value="outdoor_4" selected>春 4月 (屋外)</option>
-                                <option value="outdoor_7">夏 7月 (屋外)</option>
-                                <option value="outdoor_10">秋 10月 (屋外)</option>
-                            </optgroup>
-                            <optgroup label="屋内">
-                                <option value="indoor_1">冬 1月 (屋内)</option>
-                                <option value="indoor_4">春 4月 (屋内)</option>
-                                <option value="indoor_7">夏 7月 (屋内)</option>
-                                <option value="indoor_10">秋 10月 (屋内)</option>
-                            </optgroup>
+                    <!-- LED 輝度設定 -->
+                    <div class="flex items-center gap-3 mt-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <span class="text-sm font-bold text-yellow-800">💡 LED 光量</span>
+                        <select id="led-lux-select" class="text-sm border border-yellow-300 rounded px-2 py-1 bg-white text-yellow-900 font-mono">
+                            <option value="1000">1,000 lx</option>
+                            <option value="2000">2,000 lx</option>
+                            <option value="3000">3,000 lx</option>
+                            <option value="4000">4,000 lx</option>
+                            <option value="5000">5,000 lx</option>
+                            <option value="6000">6,000 lx</option>
+                            <option value="7000">7,000 lx</option>
+                            <option value="8000" selected>8,000 lx</option>
+                            <option value="9000">9,000 lx</option>
+                            <option value="10000">10,000 lx</option>
+                            <option value="11000">11,000 lx</option>
+                            <option value="12000">12,000 lx</option>
+                            <option value="13000">13,000 lx</option>
+                            <option value="14000">14,000 lx</option>
+                            <option value="15000">15,000 lx</option>
                         </select>
+                        <span class="text-xs text-yellow-600">（ON ボタンで適用）</span>
                     </div>
-                </div>
-                <!-- リアルタイム電気代 -->
-                <div class="flex items-center justify-between mt-2 bg-yellow-50 rounded-lg px-3 py-1.5 border border-yellow-100">
-                    <span class="text-xs text-yellow-700">⚡ LED電気代（累積）</span>
-                    <span id="cost-realtime" class="text-xs font-bold text-yellow-800">0.0円</span>
-                </div>
-                <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
-                    <div class="flex flex-col">
-                        <label class="text-slate-500">日の出 (hour)</label>
-                        <input id="sunrise-input" type="number" min="0" max="23" value="6" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
-                    </div>
-                    <div class="flex flex-col">
-                        <label class="text-slate-500">日の入り (hour)</label>
-                        <input id="sunset-input" type="number" min="0" max="23" value="18" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
-                    </div>
-                    <div class="flex flex-col">
-                        <label class="text-slate-500">ピーク照度 (lux)</label>
-                        <input id="peak-input" type="number" min="0" step="1000" value="5000" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                    <!-- 手動操作ボタン -->
+                    <div class="grid grid-cols-4 gap-3 mt-2">
+                        <button id="btn-led-on" class="manual-btn border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+                                onclick="manualLED(true)">
+                            <span class="text-xl">💡</span>LED ON
+                        </button>
+                        <button id="btn-led-off" class="manual-btn border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                onclick="manualLED(false)">
+                            <span class="text-xl">⚫</span>LED OFF
+                        </button>
+                        <button class="manual-btn border-sky-400 bg-sky-50 text-sky-700 hover:bg-sky-100"
+                                onclick="manualPump()">
+                            <span class="text-xl">💧</span>ポンプ
+                        </button>
+                        <button class="manual-btn border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100"
+                                onclick="manualAddWater()">
+                            <span class="text-xl">🚰</span>足し水
+                        </button>
                     </div>
                 </div>
             </div>
@@ -371,46 +329,83 @@
 
                 <!-- 手動タブ -->
                 <div id="panel-manual">
-                    <!-- LED 輝度設定 -->
-                    <div class="flex items-center gap-3 mb-3 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <span class="text-sm font-bold text-yellow-800">💡 LED 光量</span>
-                        <select id="led-lux-select" class="text-sm border border-yellow-300 rounded px-2 py-1 bg-white text-yellow-900 font-mono">
-                            <option value="1000">1,000 lx</option>
-                            <option value="2000">2,000 lx</option>
-                            <option value="3000">3,000 lx</option>
-                            <option value="4000">4,000 lx</option>
-                            <option value="5000">5,000 lx</option>
-                            <option value="6000">6,000 lx</option>
-                            <option value="7000">7,000 lx</option>
-                            <option value="8000" selected>8,000 lx</option>
-                            <option value="9000">9,000 lx</option>
-                            <option value="10000">10,000 lx</option>
-                            <option value="11000">11,000 lx</option>
-                            <option value="12000">12,000 lx</option>
-                            <option value="13000">13,000 lx</option>
-                            <option value="14000">14,000 lx</option>
-                            <option value="15000">15,000 lx</option>
-                        </select>
-                        <span class="text-xs text-yellow-600">（ON ボタンで適用）</span>
+                    <!-- 環境センサー 2×2 -->
+                    <div class="grid grid-cols-2 gap-3 mb-3 text-sm">
+                        <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                            <p class="text-[10px] text-blue-600 font-bold uppercase">Temperature (気温)</p>
+                            <p class="text-lg font-bold text-slate-700"><span id="sensor-temp">24.0</span>°C</p>
+                        </div>
+                        <div class="bg-sky-50 p-2 rounded-lg border border-sky-100">
+                            <p class="text-[10px] text-sky-600 font-bold uppercase">Humidity (湿度)</p>
+                            <p class="text-lg font-bold text-slate-700"><span id="sensor-humid">55.0</span>%</p>
+                        </div>
+                        <div class="bg-green-50 p-2 rounded-lg border border-green-100">
+                            <p class="text-[10px] text-green-600 font-bold uppercase">EC Value (EC値)</p>
+                            <p class="text-lg font-bold text-slate-700"><span id="sensor-ec">1.2</span> <small>mS/cm</small></p>
+                        </div>
+                        <div class="bg-yellow-50 p-2 rounded-lg border border-yellow-100">
+                            <p class="text-[10px] text-yellow-600 font-bold uppercase">Light / Sensor (太陽光センサ)</p>
+                            <p class="text-lg font-bold text-slate-700"><span id="sensor-light">1200</span> <small>lx</small></p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">出力: <span id="sensor-light-total">1200</span> lx</p>
+                        </div>
                     </div>
-                    <!-- 手動操作ボタン -->
-                    <div class="grid grid-cols-4 gap-3 mb-4">
-                        <button id="btn-led-on" class="manual-btn border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
-                                onclick="manualLED(true)">
-                            <span class="text-xl">💡</span>LED ON
-                        </button>
-                        <button id="btn-led-off" class="manual-btn border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"
-                                onclick="manualLED(false)">
-                            <span class="text-xl">⚫</span>LED OFF
-                        </button>
-                        <button class="manual-btn border-sky-400 bg-sky-50 text-sky-700 hover:bg-sky-100"
-                                onclick="manualPump()">
-                            <span class="text-xl">💧</span>ポンプ
-                        </button>
-                        <button class="manual-btn border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100"
-                                onclick="manualAddWater()">
-                            <span class="text-xl">🚰</span>足し水
-                        </button>
+
+                    <!-- ステージタイムライン (フル幅) -->
+                    <div class="mb-3 bg-slate-50 rounded-xl px-3 pt-2 pb-2 border border-slate-200">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">🌿 成長ステージ</span>
+                            <span class="text-[10px] text-slate-400" id="stage-req">💡 300lx | 🌡️ 22°C</span>
+                        </div>
+                        <div class="relative">
+                            <div class="stage-track">
+                                <div class="stage-seg dim" id="ss0" style="width:10%;background:#94a3b8;">発芽</div>
+                                <div class="stage-seg dim" id="ss1" style="width:20%;background:#84cc16;">幼苗</div>
+                                <div class="stage-seg dim" id="ss2" style="width:40%;background:#22c55e;">生育</div>
+                                <div class="stage-seg dim" id="ss3" style="width:30%;background:#f59e0b;">成熟</div>
+                            </div>
+                            <div class="stage-cursor" id="stage-cursor" style="left:0%"></div>
+                        </div>
+                        <div class="flex items-center justify-between mt-1.5">
+                            <span class="text-[11px] font-bold text-purple-700" id="sensor-stage">発芽期</span>
+                            <div class="flex items-center gap-2">
+                                <span id="light-warn" class="hidden text-[10px] font-bold text-amber-600">⚠️ 光量不足→徒長</span>
+                                <span class="text-[10px] text-slate-500 font-mono" id="sens-growth-pct">0.0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 植物ステータス: ダメージ・徒長・水位 -->
+                    <div class="grid grid-cols-3 gap-2 mb-2 text-sm">
+                        <div class="bg-rose-50 p-2 rounded-lg border border-rose-100">
+                            <p class="text-[10px] text-rose-600 font-bold uppercase">Damage (ダメージ)</p>
+                            <div class="w-full bg-rose-200 rounded-full h-2 mt-2">
+                                <div id="damage-bar" class="bg-rose-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="bg-amber-50 p-2 rounded-lg border border-amber-100">
+                            <p class="text-[10px] text-amber-600 font-bold uppercase">Etiolation (徒長)</p>
+                            <div class="w-full bg-amber-200 rounded-full h-2 mt-2">
+                                <div id="etiolation-bar" class="bg-amber-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="bg-teal-50 p-2 rounded-lg border border-teal-100">
+                            <p class="text-[10px] text-teal-600 font-bold uppercase">Water Level (水位差)</p>
+                            <p class="text-lg font-bold text-slate-700"><span id="sensor-water">0.00</span> cm</p>
+                        </div>
+                    </div>
+                    <!-- エネルギー蓄積バー -->
+                    <div class="mb-2 bg-lime-50 border border-lime-200 rounded-lg px-3 py-2 flex items-center gap-3">
+                        <span class="text-[10px] font-bold text-lime-700 shrink-0">⚡ エネルギー蓄積</span>
+                        <div class="flex-1 bg-lime-200 rounded-full h-2">
+                            <div id="storage-bar" class="bg-lime-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                        </div>
+                        <span id="storage-val" class="text-[10px] font-mono text-lime-800 shrink-0 w-[36px] text-right">0%</span>
+                        <span id="storage-status" class="text-[10px] font-bold shrink-0"></span>
+                    </div>
+                    <!-- ダメージ原因内訳 -->
+                    <div class="mb-3 bg-white border border-slate-200 rounded-xl p-3">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">📊 ダメージ原因内訳 <span class="normal-case font-normal text-slate-400">(現在時間あたり)</span></p>
+                        <div id="stress-breakdown" class="space-y-1.5"></div>
                     </div>
 
                     <!-- グラフエリア -->
