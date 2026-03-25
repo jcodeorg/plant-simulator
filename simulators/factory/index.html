@@ -855,14 +855,10 @@
                     // EC の自然減少
                     state.ec = Math.max(0, state.ec - 0.001);
 
-                    // 制御ブロックを毎時間自動実行 (ブロックがあれば実行、なければ太陽光スケジュール)
+                    // 制御ブロックを毎時間実行（ブロックがなければLED状態はそのまま維持）
                     const rootBlocks = document.getElementById('workspace').children;
                     if (rootBlocks.length > 0) {
                         executeBlockList(rootBlocks);
-                    } else {
-                        // ブロック未設定時は太陽光スケジュールに従う
-                        state.ledActive = w.lux > 0;
-                        if (state.ledActive) state.ledLux = 8000;
                     }
 
                     // 総合光量 = 太陽光 + LED
@@ -1310,8 +1306,8 @@
             state.humid  = 55.0;
             state.damage = 0;
             state.waterLevel = 0;
-            state.ledActive = false;
-            state.ledLux    = 8000;
+            state.ledActive     = false;
+            state.ledLux        = 8000;
             state.etiolation    = 0;
             state.stageName     = '発芽期';
             lettuce.state.growth     = 0;
