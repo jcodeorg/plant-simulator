@@ -417,19 +417,19 @@
                     <div class="grid grid-cols-2 gap-2">
                         <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
                             <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌡️ 気温 (°C)</p>
-                            <div class="chart-wrap"><svg id="chart-temp" width="100%" height="55" viewBox="0 0 300 55" preserveAspectRatio="none"></svg></div>
+                            <div class="chart-wrap"><svg id="chart-temp" width="100%" height="100" viewBox="0 0 300 100" preserveAspectRatio="none"></svg></div>
                         </div>
                         <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
                             <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">💧 湿度 (%)</p>
-                            <div class="chart-wrap"><svg id="chart-humid" width="100%" height="55" viewBox="0 0 300 55" preserveAspectRatio="none"></svg></div>
+                            <div class="chart-wrap"><svg id="chart-humid" width="100%" height="100" viewBox="0 0 300 100" preserveAspectRatio="none"></svg></div>
                         </div>
                         <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
                             <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">☀️ 光量 (lx)</p>
-                            <div class="chart-wrap"><svg id="chart-light" width="100%" height="55" viewBox="0 0 300 55" preserveAspectRatio="none"></svg></div>
+                            <div class="chart-wrap"><svg id="chart-light" width="100%" height="100" viewBox="0 0 300 100" preserveAspectRatio="none"></svg></div>
                         </div>
                         <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
                             <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌱 成長率 / ダメージ</p>
-                            <div class="chart-wrap"><svg id="chart-growth" width="100%" height="55" viewBox="0 0 300 55" preserveAspectRatio="none"></svg></div>
+                            <div class="chart-wrap"><svg id="chart-growth" width="100%" height="100" viewBox="0 0 300 100" preserveAspectRatio="none"></svg></div>
                         </div>
                     </div>
                 </div>
@@ -513,60 +513,63 @@
 
     <!-- 結果モーダル -->
     <div id="result-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 w-full max-w-lg mx-4">
-            <div class="text-center mb-5">
-                <div id="result-icon" class="text-5xl mb-2"></div>
-                <h2 id="result-title" class="text-xl font-bold text-slate-800"></h2>
-                <p id="result-subtitle" class="text-sm text-slate-500 mt-1"></p>
-            </div>
-            <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="bg-purple-50 rounded-xl p-3 border border-purple-100">
-                    <p class="text-[10px] text-purple-600 font-bold uppercase">最終成長率</p>
-                    <p class="text-2xl font-bold text-purple-700" id="res-growth">-</p>
-                </div>
-                <div class="bg-rose-50 rounded-xl p-3 border border-rose-100">
-                    <p class="text-[10px] text-rose-600 font-bold uppercase">ダメージ</p>
-                    <p class="text-2xl font-bold text-rose-600" id="res-damage">-</p>
-                </div>
-                <div class="bg-amber-50 rounded-xl p-3 border border-amber-100">
-                    <p class="text-[10px] text-amber-600 font-bold uppercase">徒長度</p>
-                    <p class="text-2xl font-bold text-amber-600" id="res-etiol">-</p>
-                </div>
-                <div class="bg-sky-50 rounded-xl p-3 border border-sky-100">
-                    <p class="text-[10px] text-sky-600 font-bold uppercase">経過日数</p>
-                    <p class="text-2xl font-bold text-sky-700" id="res-days">-</p>
-                </div>
-            </div>
-            <!-- 電気代 -->
-            <div class="bg-yellow-50 rounded-xl p-3 border border-yellow-200 mb-3 flex items-center justify-between">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 px-5 py-3 w-full max-w-2xl mx-3">
+            <div class="flex items-center gap-3 mb-3">
+                <div id="result-icon" class="text-3xl shrink-0"></div>
                 <div>
-                    <p class="text-[10px] text-yellow-700 font-bold uppercase">⚡ LED電気代</p>
-                    <p class="text-[10px] text-yellow-500 mt-0.5" id="res-electric-detail">-</p>
+                    <h2 id="result-title" class="text-base font-bold text-slate-800 leading-tight"></h2>
+                    <p id="result-subtitle" class="text-xs text-slate-500 mt-0.5"></p>
                 </div>
-                <p class="text-2xl font-bold text-yellow-700" id="res-electric">-</p>
             </div>
-            <!-- 詳細ステータス -->
-            <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 mb-3">
-                <p class="text-[10px] text-slate-500 font-bold uppercase mb-2">📊 詳細ステータス</p>
-                <div class="grid grid-cols-3 gap-2 text-center">
+            <!-- スコアグリッド: 4カラム -->
+            <div class="grid grid-cols-4 gap-2 mb-3">
+                <div class="bg-purple-50 rounded-lg px-2 py-1.5 border border-purple-100 text-center">
+                    <p class="text-[9px] text-purple-600 font-bold uppercase">最終成長率</p>
+                    <p class="text-lg font-bold text-purple-700 leading-tight" id="res-growth">-</p>
+                </div>
+                <div class="bg-rose-50 rounded-lg px-2 py-1.5 border border-rose-100 text-center">
+                    <p class="text-[9px] text-rose-600 font-bold uppercase">ダメージ</p>
+                    <p class="text-lg font-bold text-rose-600 leading-tight" id="res-damage">-</p>
+                </div>
+                <div class="bg-amber-50 rounded-lg px-2 py-1.5 border border-amber-100 text-center">
+                    <p class="text-[9px] text-amber-600 font-bold uppercase">徒長度</p>
+                    <p class="text-lg font-bold text-amber-600 leading-tight" id="res-etiol">-</p>
+                </div>
+                <div class="bg-sky-50 rounded-lg px-2 py-1.5 border border-sky-100 text-center">
+                    <p class="text-[9px] text-sky-600 font-bold uppercase">経過日数</p>
+                    <p class="text-lg font-bold text-sky-700 leading-tight" id="res-days">-</p>
+                </div>
+            </div>
+            <!-- 電気代 + 詳細 -->
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <div class="bg-yellow-50 rounded-lg px-3 py-1.5 border border-yellow-200 flex items-center justify-between">
                     <div>
-                        <p class="text-[10px] text-slate-400">最高到達成長</p>
-                        <p class="text-sm font-bold text-slate-700" id="res-maxgrowth">-</p>
+                        <p class="text-[9px] text-yellow-700 font-bold uppercase">⚡ LED電気代</p>
+                        <p class="text-[9px] text-yellow-500 mt-0.5" id="res-electric-detail">-</p>
                     </div>
-                    <div>
-                        <p class="text-[10px] text-slate-400">LED稼山率</p>
-                        <p class="text-sm font-bold text-slate-700" id="res-ledpct">-</p>
-                    </div>
-                    <div>
-                        <p class="text-[10px] text-slate-400">到達ステージ</p>
-                        <p class="text-sm font-bold text-slate-700" id="res-stage">-</p>
+                    <p class="text-lg font-bold text-yellow-700" id="res-electric">-</p>
+                </div>
+                <div class="bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-200">
+                    <div class="grid grid-cols-3 gap-1 text-center">
+                        <div>
+                            <p class="text-[9px] text-slate-400">最高到達成長</p>
+                            <p class="text-xs font-bold text-slate-700" id="res-maxgrowth">-</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] text-slate-400">LED稼働率</p>
+                            <p class="text-xs font-bold text-slate-700" id="res-ledpct">-</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] text-slate-400">到達ステージ</p>
+                            <p class="text-xs font-bold text-slate-700" id="res-stage">-</p>
+                        </div>
                     </div>
                 </div>
             </div>
             <!-- 分析コメント -->
-            <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 mb-4">
-                <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">💡 分析</p>
-                <ul id="result-comments" class="text-xs text-slate-700 space-y-1 list-none"></ul>
+            <div class="bg-slate-50 rounded-lg px-3 py-2 border border-slate-200 mb-3">
+                <p class="text-[9px] text-slate-500 font-bold uppercase mb-1">💡 分析</p>
+                <ul id="result-comments" class="text-xs text-slate-700 space-y-0.5 list-none"></ul>
             </div>
             <div class="flex gap-2">
                 <button id="modal-resume-btn" onclick="resumeFromPause()" class="hidden flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 rounded-full transition text-sm">
@@ -818,7 +821,7 @@
         function drawChart(svgId, values, color, min, max, values2, color2) {
             const svg = document.getElementById(svgId);
             if (!svg || values.length < 2) return;
-            const W = 300, H = 55, PAD = 4;
+            const W = 300, H = 100, PAD = 4;
             const n = values.length;
             const range = max - min || 1;
             const pts = (arr) => arr.map((v, i) => {
