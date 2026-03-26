@@ -27,8 +27,8 @@ class PlantSimulator {
             tipburn: 0.0,       // チップバーン度
             dailyLightSum: 0,   // 当日の積算光量
             isLightDeficit: false, // 前日の光不足フラグ
-            isDay: false,       // 昼間フラグ (l>50で立ち、l<50で倒れる。0時にリセット)
-            storageDLI: 0.0     // 光合成エネルギー蓄積量 (昇淯上限 1.0)
+            storageDLI: 0.0,    // 光合成エネルギー蓄積量 (上限 1.0)
+            isDayLightDeficit: false // 当日昼間に光不足があったフラグ (夜の徒長判定に使用)
         };
     }
 
@@ -56,7 +56,7 @@ class PlantSimulator {
         if (hour === 0) {
             this.state.isLightDeficit = (this.state.dailyLightSum < this.config.dliThreshold);
             this.state.dailyLightSum = 0;
-            this.state.isDay = false; // 日付が変わったら昼間フラグをリセット
+            this.state.isDayLightDeficit = false; // 昼間光不足フラグを朝にリセット
         }
         this.state.dailyLightSum += l * dt;
 
@@ -69,10 +69,8 @@ class PlantSimulator {
         this.state.waterLevel -= (evap + trans) * dt;
 
         // --- 2. 成長因子の計算 ---
-        // 昼間フラグを先に確定（エネルギーモデルで必要）
-        if (l > 50) this.state.isDay = true;
-        if (l < 50) this.state.isDay = false;
-        const isDaytime = this.state.isDay;
+        // 昼間フラグをローカル変数で判定
+        const isDaytime = l > 50;
 
         const fL = l / (l + sp.kl);
         const fT = Math.exp(-Math.pow(t - sp.optTemp, 2) / (2 * sp.tempW * sp.tempW));
@@ -84,11 +82,21 @@ class PlantSimulator {
         const iW = Math.exp(-this.config.kw * Math.pow(this.state.waterLevel, 2)); // 水位応答
 
         // --- エネルギー蓄積・変換モデル ---
+        // 発芽期は暗所発芽が基本のため徒長しない
+        const isGerminating = this.state.growth < 0.10;
+        let etiolStep = 0;            // 徒長進行速度 (per hour)
+        const dayLightThreshold = 5000; // 昼間光不足の判定閾値 (lx)
+
         let deltaG = 0;
         if (isDaytime) {
             // 昼間: 光合成でエネルギーを蓄める
             // /10 で正規化: 良好な照度12hでほぼ満タン(~0.7)になるスケール
             this.state.storageDLI = Math.min(1.0, this.state.storageDLI + fL * fT * dt / 10);
+
+            // 昼間光不足フラグ: 5000lx未満なら「徒長予備軍」として記録
+            if (!isGerminating && l < dayLightThreshold) {
+                this.state.isDayLightDeficit = true;
+            }
 
             // デンプン飽和チェック: 0.7超で光合成抑制・わずかにチップバーンリスク上昇
             let satDebuff = 1.0;
@@ -99,30 +107,33 @@ class PlantSimulator {
             }
             deltaG = sp.baseSpeed * fL * fT * fVPD * iW * satDebuff * dt;
         } else {
-            // 夜間: 蓄積エネルギーを成長に変換
+            // 夜間: 蓄積エネルギーを「成長 (Growth)」または「徒長 (Etiolation)」に分配
             const conversionRate = 0.1 * fT; // 夜間温度が良いほど変換効率アップ
             const cost = Math.min(this.state.storageDLI, 0.05 * dt);
-            deltaG = cost * conversionRate;
             this.state.storageDLI = Math.max(0, this.state.storageDLI - cost);
+
+            if (!isGerminating && this.state.isDayLightDeficit) {
+                // 【徒長ルート】昼間に光不足 → 「光のある高さまで伸びろ」という命令
+                // 夜温が高いほど細胞伸長が加速（代謝過剰による軟弱化）
+                const nightTempMult = t > 20 ? 1.0 + (t - 20) * 0.15 : 1.0;
+                etiolStep = (cost / dt) * conversionRate * sp.etiolSens * nightTempMult;
+                deltaG    = cost * conversionRate * 0.2; // 成長は抑制（エネルギーを徒長に奪われる）
+            } else {
+                // 【正常ルート】エネルギーを均一な成長に変換
+                deltaG = cost * conversionRate;
+                // 夜温過剰による軟弱化（光は足りているが高温で細胞が過剰伸長する）
+                if (!isGerminating && t > 22) {
+                    etiolStep = (t - 22) * 0.004 * sp.etiolSens;
+                }
+            }
         }
 
         this.state.growth = Math.min(1.0, this.state.growth + Math.max(0, deltaG));
 
         // --- 3. 徒長 (Etiolation) ---
-        let etiolStep = 0;
-        // isDaytime は step 2 先頭で確定済み
-        const lightThreshold = 8000;
-
-        // 発芽期は暗所発芽が基本のため徒長しない
-        const isGerminating = this.state.growth < 0.10;
-
-        // 「昼間の光不足」または「エネルギー不足の夜」に進行
-        if (!isGerminating && ((isDaytime && l < lightThreshold) || (!isDaytime && this.state.isLightDeficit))) {
-            // console.log(hour, isDaytime, l < lightThreshold, this.state.isLightDeficit);
-            const deficit = isDaytime ? (lightThreshold - l) / lightThreshold : 0.5;
-            const tFactor = t > 22 ? (t - 22) * 0.1 + 1 : 1;
-            etiolStep = deficit * tFactor * sp.etiolSens * 0.01;
-        }
+        // etiolStep はエネルギー分配モデル内で算出済み:
+        //   徒長ルート: 昼間の光不足 → 夜にエネルギーが成長でなく茎伸長へ転換
+        //   軟弱化ルート: 夜温過剰 → 光は十分でも高温で細胞が緩み軟弱になる
         this.state.etiolation = Math.min(1.0, this.state.etiolation + etiolStep * dt);
 
         // --- 4. チップバーン (Tipburn) ---

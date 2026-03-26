@@ -3,6 +3,7 @@
 https://jcodeorg.github.io/plant-simulator/
 
 ### シミュレータ一覧
+- [植物工場シミュレータ](./simulators/factory/)
 - [成長シミュレータ](./simulators/grow/)
 - [水稲シミュレータ](./simulators/rice/)
 
