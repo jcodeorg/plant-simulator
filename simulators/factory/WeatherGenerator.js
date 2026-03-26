@@ -14,7 +14,7 @@ class WeatherGenerator {
         const sunrise = (typeof opts.sunrise === 'number') ? opts.sunrise : 6;
         const sunset  = (typeof opts.sunset === 'number')  ? opts.sunset  : 18;
 
-        for (let day = 1; day <= 45; day++) {
+        for (let day = 1; day <= 60; day++) {
             for (let hour = 0; hour < 24; hour++) {
                 // 1. 気温の計算 (14時にピーク、正弦波)
                 const timeDiff = Math.sin((hour - 8) * Math.PI / 12); 

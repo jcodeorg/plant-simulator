@@ -616,7 +616,7 @@
         const lettuce = new PlantSimulator();
         const weather = new WeatherGenerator();
 
-        let weatherData  = [];  // generateMonthData() の結果 (45日×24時間)
+        let weatherData  = [];  // generateMonthData() の結果 (60日×24時間)
         let weatherIndex = 0;   // 現在の時間インデックス
         let simAccum     = 0;   // 蓄積経過（シミュレーション時間・時間単位）
         let simSpeed     = 1;    // 速度: 単位は時間/実秒 (1〜24)
@@ -961,8 +961,8 @@
         }
 
         // --- グラフ描画 ---
-        // 全期間（最大 45日×24時間=1080点）を保持し全て表示
-        const CHART_MAX = 1080;
+        // 全期間（最大 60日×24時間=1440点）を保持し全て表示
+        const CHART_MAX = 1440;
         const chartData = {
             temp:   [],
             humid:  [],
@@ -1043,7 +1043,7 @@
                     simAccum -= 1.0;
 
                     if (weatherIndex >= weatherData.length) {
-                        // 45日データ終了 → 結果表示して停止
+                        // 60日データ終了 → 結果表示して停止
                         const lastW = weatherData[weatherData.length - 1];
                         showResult('completed', lastW.day);
                         break;
@@ -1455,7 +1455,7 @@
             const subtitles = {
                 harvested: `Day ${endDay}に収穫サイクルを達成しました`,
                 died:      `Day ${endDay}に植物が椒死しました`,
-                completed: `45日間のシミュレーションが完了しました`,
+                completed: `60日間のシミュレーションが完了しました`,
                 paused:    `Day ${endDay} 時点の評価です（再開できます）`
             };
 
@@ -1722,7 +1722,7 @@
             initWeather(4);
             addLog("Smart Farm OS initialized.");
             addLog("PlantSimulator (サニーレタス) 読み込み完了。", "success");
-            addLog("WeatherGenerator (東京・4月 45日分) 読み込み完了。", "success");
+            addLog("WeatherGenerator (東京・4月 60日分) 読み込み完了。", "success");
             addLog("速度スライダーを動かしてシミュレーションを開始してください。", "info");
             coreLoop();
         };
