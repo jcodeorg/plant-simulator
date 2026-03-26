@@ -16,17 +16,13 @@ class PlantSimulator {
             kw: 0.05,            // 水位ストレス係数
             recoveryRate: 0.001, // 自然回復量
             damageCoeff: 0.01,   // 全体ダメージ係数
-            dliThreshold: 8000*10 //150000 // 理想積算光量 (Lx・h)
         };
 
         this.state = {
             growth: 0.0,
             damage: 0.0,
             waterLevel: 0.0,    // 0.0cm基準
-            etiolation: 0.0,    // 徒長度
             tipburn: 0.0,       // チップバーン度
-            dailyLightSum: 0,   // 当日の積算光量
-            isLightDeficit: false, // 前日の光不足フラグ
             storageDLI: 0.0,    // 光合成エネルギー蓄積量 (上限 1.0)
             isDayLightDeficit: false // 当日昼間に光不足があったフラグ (夜の徒長判定に使用)
         };
@@ -54,11 +50,8 @@ class PlantSimulator {
     update(t, h, l, dt = 1.0, hour = 0) {
         // --- 0. 日次リセットと積算光量 ---
         if (hour === 0) {
-            this.state.isLightDeficit = (this.state.dailyLightSum < this.config.dliThreshold);
-            this.state.dailyLightSum = 0;
             this.state.isDayLightDeficit = false; // 昼間光不足フラグを朝にリセット
         }
-        this.state.dailyLightSum += l * dt;
 
         const vpd = this.calculateVPD(t, h);
         const sp = this.getStage();
@@ -123,20 +116,15 @@ class PlantSimulator {
                 deltaG = cost * conversionRate;
                 // 夜温過剰による軟弱化（光は足りているが高温で細胞が過剰伸長する）
                 if (!isGerminating && t > 22) {
-                    etiolStep = (t - 22) * 0.004 * sp.etiolSens;
+                    etiolStep = (t - 22) * 0.004 * sp.etiolSens * 0.1; // 軟弱化は穏やかに進行
                 }
             }
         }
 
         this.state.growth = Math.min(1.0, this.state.growth + Math.max(0, deltaG));
 
-        // --- 3. 徒長 (Etiolation) ---
-        // etiolStep はエネルギー分配モデル内で算出済み:
-        //   徒長ルート: 昼間の光不足 → 夜にエネルギーが成長でなく茎伸長へ転換
-        //   軟弱化ルート: 夜温過剰 → 光は十分でも高温で細胞が緩み軟弱になる
-        this.state.etiolation = Math.min(1.0, this.state.etiolation + etiolStep * dt);
-
-        // --- 4. チップバーン (Tipburn) ---
+        // --- 3. チップバーン (Tipburn) ---
+        // ※etiolStep はエネルギーモデルで算出済み → 以下のダメージ計算(sEtiol)に直接使用
         let tipburnStep = 0;
         if (this.state.growth > 0.3) {
             // 高負荷（強い光＋高温）かつ 蒸散不良（VPD異常）
@@ -153,29 +141,35 @@ class PlantSimulator {
         // 環境ストレス (高温・湿度異常)
         const sE = Math.max(0, t - 26) * 0.1 + (Math.abs(h - 60) > 25 ? 0.05 : 0);
         // 水位ストレス (水切れは致命的)
-        const sW = this.state.waterLevel < -3.0 ? 0.3 : Math.abs(this.state.waterLevel) * 0.03;
-        // 徒長とチップバーンによる品質低下（個別に記録）
-        const sEtiol   = this.state.etiolation * 0.2;
-        const sTipburn = this.state.tipburn * 0.3;   // 0.8 → 0.3 に緩和
-        const sQuality = sEtiol + sTipburn;
+        const sW = this.state.waterLevel < -3.0 ? 0.3 : 0 // Math.abs(this.state.waterLevel) * 0.03;
+        // 徒長・軟弱化ストレスとチップバーンによる品質低下
+        const sTipburn = this.state.tipburn * 0.3;
+        // etiolStep を累積せず /h 直接換算 — 他のストレス要因(sE, sW)と同様に扱う
+        const sEtiol   = etiolStep;  // 光不足・夜温過剰による組織劣化 (max ≈ 0.15〜0.2)
 
-        const totalStress = (sE + sW + sQuality) * this.config.damageCoeff;
-        const netDamage = totalStress - this.config.recoveryRate;
+        const dmgE = sE * this.config.damageCoeff;
+        const dmgW = sW * this.config.damageCoeff;
+        const dmgT = sTipburn * this.config.damageCoeff;
+        const dmgEt = sEtiol;
+        const recov = this.config.recoveryRate;
+
+        const netDamage = Math.max(0, dmgE + dmgW + dmgT - recov) + dmgEt; // 徒長ストレスは回復で相殺されない（自然回復は主に環境ストレスの回復を表すため）
         this.state.damage = Math.max(0, Math.min(1.0, this.state.damage + netDamage * dt));
 
         return {
             ...this.state,
+            // etiolRate: etiolStep,  // 現時点の徒長ダメージ発生率 (SVG描画・ブレークダウン表示用)
             stageName: sp.name,
             vpd: vpd,
             isDead: this.state.damage >= 1.0,
             isHarvestable: this.state.growth >= 1.0 && this.state.damage < 0.5,
             stressBreakdown: {
-                env:      sE      * this.config.damageCoeff,  // 現時点の環境ストレス/h
-                water:    sW      * this.config.damageCoeff,  // 水分ストレス/h
-                etiol:    sEtiol  * this.config.damageCoeff,  // 徒長ストレス/h
-                tipburn:  sTipburn* this.config.damageCoeff,  // チップバーンストレス/h
-                recovery: this.config.recoveryRate,            // 自然回復/h
-                net:      netDamage                            // 正味ダメージ変化/h
+                env:      dmgE    * dt,  // 現時点の環境ストレス/h
+                water:    dmgW    * dt,  // 水分ストレス/h
+                etiol:    dmgEt   * dt,  // 徒長・軟弱化ストレス/h (直接換算)
+                tipburn:  dmgT    * dt,  // チップバーンストレス/h
+                recovery: recov   * dt,  // 自然回復/h
+                net:      netDamage * dt  // 正味ダメージ変化/h
             }
         };
     }

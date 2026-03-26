@@ -377,24 +377,18 @@
                         <div class="flex items-center justify-between mt-1.5">
                             <span class="text-[11px] font-bold text-purple-700" id="sensor-stage">発芽期</span>
                             <div class="flex items-center gap-2">
-                                <span id="light-warn" class="hidden text-[10px] font-bold text-amber-600">⚠️ 光量不足→徒長</span>
+                                <span id="light-warn" class="hidden text-[10px] font-bold text-amber-600">⚠️ 光量不足</span>
                                 <span class="text-[10px] text-slate-500 font-mono" id="sens-growth-pct">0.0%</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 植物ステータス: ダメージ・徒長・水位 -->
-                    <div class="grid grid-cols-3 gap-2 mb-2 text-sm">
+                    <!-- 植物ステータス: ダメージ・水位 (徒長はダメージ原因内訳に統合) -->
+                    <div class="grid grid-cols-2 gap-2 mb-2 text-sm">
                         <div class="bg-rose-50 p-2 rounded-lg border border-rose-100">
                             <p class="text-[10px] text-rose-600 font-bold uppercase">Damage (ダメージ)</p>
                             <div class="w-full bg-rose-200 rounded-full h-2 mt-2">
                                 <div id="damage-bar" class="bg-rose-500 h-2 rounded-full transition-all" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div class="bg-amber-50 p-2 rounded-lg border border-amber-100">
-                            <p class="text-[10px] text-amber-600 font-bold uppercase">Etiolation (徒長)</p>
-                            <div class="w-full bg-amber-200 rounded-full h-2 mt-2">
-                                <div id="etiolation-bar" class="bg-amber-500 h-2 rounded-full transition-all" style="width: 0%"></div>
                             </div>
                         </div>
                         <div class="bg-teal-50 p-2 rounded-lg border border-teal-100">
@@ -544,13 +538,18 @@
                     <p class="text-lg font-bold text-rose-600 leading-tight" id="res-damage">-</p>
                 </div>
                 <div class="bg-amber-50 rounded-lg px-2 py-1.5 border border-amber-100 text-center">
-                    <p class="text-[9px] text-amber-600 font-bold uppercase">徒長度</p>
+                    <p class="text-[9px] text-amber-600 font-bold uppercase">徒長（累積）</p>
                     <p class="text-lg font-bold text-amber-600 leading-tight" id="res-etiol">-</p>
                 </div>
                 <div class="bg-sky-50 rounded-lg px-2 py-1.5 border border-sky-100 text-center">
                     <p class="text-[9px] text-sky-600 font-bold uppercase">経過日数</p>
                     <p class="text-lg font-bold text-sky-700 leading-tight" id="res-days">-</p>
                 </div>
+            </div>
+            <!-- ダメージ要因分析 -->
+            <div class="bg-rose-50 rounded-lg px-3 py-2 border border-rose-100 mb-3">
+                <p class="text-[9px] text-rose-600 font-bold uppercase mb-1.5">📊 ダメージ主要因分析</p>
+                <div id="res-damage-breakdown" class="space-y-1"></div>
             </div>
             <!-- 電気代 + 詳細 -->
             <div class="grid grid-cols-2 gap-2 mb-3">
@@ -929,7 +928,6 @@
                     state.growth     = simStatus.growth * 100;
                     state.damage     = simStatus.damage;
                     state.waterLevel = simStatus.waterLevel;
-                    state.etiolation = simStatus.etiolation;
                     state.stageName  = simStatus.stageName;
                     state.stressBreakdown = simStatus.stressBreakdown;
                     // ストレス要因を累積
@@ -939,6 +937,8 @@
                     stressCumul.etiol    += sbr.etiol;
                     stressCumul.tipburn  += sbr.tipburn;
                     stressCumul.recovery += sbr.recovery;
+                    // etiolation は SVG描画専用の視覚的累積値（ダメージ計算には使わない）
+                    state.etiolation = stressCumul.etiol;
                     // 統計更新
                     simStats.totalHours++;
                     if (state.ledActive) {
@@ -1071,7 +1071,6 @@
             document.getElementById('sensor-light-total').innerText = Math.round(state.light); // 出力値（太陽光+LED）
             document.getElementById('sensor-humid').innerText = state.humid.toFixed(1);
             document.getElementById('damage-bar').style.width = `${(state.damage * 100).toFixed(1)}%`;
-            document.getElementById('etiolation-bar').style.width = `${(state.etiolation * 100).toFixed(1)}%`;
             document.getElementById('sensor-water').innerText = state.waterLevel.toFixed(2);
 
             // --- エネルギー蓄積バー ---
@@ -1331,30 +1330,67 @@
             const resElecDetailEl = document.getElementById('res-electric-detail');
             if (resElecDetailEl) resElecDetailEl.textContent = `LED ${simStats.ledOnHours}時間点灯（光量加重コスト）`;
 
+            // ダメージ要因分析
+            const dmgFactors = [
+                { key: 'env',     label: '高温・湿度',   icon: '🌡️', color: 'bg-orange-400', tip: 'LED冷却や日陰対策・昼間の換気を強化してください。' },
+                { key: 'water',   label: '水分不足',     icon: '💧', color: 'bg-blue-400',   tip: '自動灌水ブロックで水位を一定に保つと改善できます。' },
+                { key: 'etiol',   label: '徒長',         icon: '🌿', color: 'bg-yellow-500', tip: 'LED照明を強化するか、日照時間を延長してください。' },
+                { key: 'tipburn', label: 'チップバーン', icon: '🍂', color: 'bg-red-400',    tip: 'ピーク照度を抑え、温度を下げると発生を抑制できます。' },
+            ];
+            const sortedFactors = [...dmgFactors].sort((a, b) => (stressCumul[b.key] || 0) - (stressCumul[a.key] || 0));
+            const breakdownEl = document.getElementById('res-damage-breakdown');
+            if (breakdownEl) {
+                if ((stressCumul[sortedFactors[0].key] || 0) > 1e-6) {
+                    breakdownEl.innerHTML = sortedFactors.map(f => {
+                        const val = stressCumul[f.key] || 0;
+                        const barW = Math.min(100, val * 100);
+                        const dispVal = (val * 100).toFixed(2);
+                        return `<div class="flex items-center gap-1.5">
+                            <span class="text-[11px] w-4 text-center shrink-0">${f.icon}</span>
+                            <span class="text-[10px] w-[72px] text-slate-600 shrink-0">${f.label}</span>
+                            <div class="flex-1 bg-slate-200 rounded-full h-2">
+                                <div class="h-2 rounded-full ${f.color} transition-all" style="width:${barW}%"></div>
+                            </div>
+                            <span class="text-[10px] font-mono w-12 text-right text-slate-700 font-bold">${dispVal}%</span>
+                        </div>`;
+                    }).join('');
+                } else {
+                    breakdownEl.innerHTML = '<p class="text-[10px] text-slate-400">ダメージ要因なし（理想的な環境管理です！）</p>';
+                }
+            }
+
             // 分析コメント生成
             const comments = [];
             if (outcome === 'harvested') {
-                comments.push({ icon: '✅', text: '理想的な成長サイクルを完達しました！' });
+                comments.push({ icon: '✅', text: '理想的な成長サイクルを完遂しました！' });
             }
-            if (state.etiolation > 0.5) {
-                comments.push({ icon: '⚠️', text: '徒長が重度です。LED照明を強化か常時点灯にすると改善できます。' });
-            } else if (state.etiolation > 0.2) {
-                comments.push({ icon: '🟡', text: '徒長が認められます。少し光量を増やすと良いでしょう。' });
+            // 主要因に基づくコメント（絶対値で判定）
+            if ((stressCumul[sortedFactors[0].key] || 0) > 1e-4) {
+                const top = sortedFactors[0];
+                const top2 = sortedFactors[1];
+                const topVal  = (stressCumul[top.key]  || 0) * 100;
+                const top2Val = (stressCumul[top2.key] || 0) * 100;
+                if (top2Val < topVal * 0.5) {
+                    // 1位が2位の2倍以上 → 単独主因
+                    comments.push({ icon: '🔍', text: `ダメージの主因は「${top.label}」(累積${topVal.toFixed(2)}%)です。${top.tip}` });
+                } else {
+                    comments.push({ icon: '🔍', text: `「${top.label}」(${topVal.toFixed(2)}%)と「${top2.label}」(${top2Val.toFixed(2)}%)が主要ストレスです。複合的な管理改善が効果的です。` });
+                }
             } else {
-                comments.push({ icon: '🟢', text: '徒長なし。山が正常です。' });
+                comments.push({ icon: '🟢', text: 'ストレス要因がほぼゼロです。理想的な環境管理です！' });
             }
             if (state.damage > 0.6) {
-                comments.push({ icon: '🔴', text: 'ダメージが深刻です。温湿度管理や水位の見直しを検討してください。' });
+                comments.push({ icon: '🔴', text: 'ダメージが深刻です。上記の主要因から優先的に対策してください。' });
             } else if (state.damage > 0.3) {
-                comments.push({ icon: '🟡', text: 'ダメージが襲積しています。ストレス要因を確認してください。' });
+                comments.push({ icon: '🟡', text: 'ダメージが蓄積しています。ストレス要因の内訳を参考に環境を改善してください。' });
             } else {
                 comments.push({ icon: '🟢', text: 'ダメージは最小限です。' });
             }
             if (ledPct < 30) {
-                comments.push({ icon: '💡', text: `LED稼山率が${ledPct}%です。屋内良育には追加照明が効果的です。` });
+                comments.push({ icon: '💡', text: `LED稼働率が${ledPct}%です。屋内栽培には追加照明が効果的です。` });
             }
             if (simStats.maxGrowth < 30 && outcome !== 'harvested') {
-                comments.push({ icon: '🟡', text: '成長が幼苗期で停滞しました。EC値・光量・温度を紹合的に見直してください。' });
+                comments.push({ icon: '🟡', text: '成長が幼苗期で停滞しました。EC値・光量・温度を総合的に見直してください。' });
             }
 
             const ul = document.getElementById('result-comments');
@@ -1519,11 +1555,8 @@
             lettuce.state.growth        = 0;
             lettuce.state.damage        = 0;
             lettuce.state.waterLevel    = 0;
-            lettuce.state.etiolation    = 0;
             lettuce.state.tipburn       = 0;
             lettuce.state.storageDLI    = 0;
-            lettuce.state.dailyLightSum = 0;
-            lettuce.state.isLightDeficit = false;
             weatherIndex = 0;
             simAccum     = 0;
             state.sunLux = 0;
