@@ -225,12 +225,12 @@
                     </div>
                     <div class="flex items-center gap-3 mb-2">
                         <span class="text-xs text-slate-400 shrink-0">1h/s</span>
-                        <input type="range" id="speed-slider" min="1" max="24" step="1" value="1"
+                        <input type="range" id="speed-slider" min="1" max="24" step="1" value="6"
                                class="flex-1 accent-emerald-500" oninput="updateSpeed(this.value)">
                         <span class="text-xs text-slate-400 shrink-0">1日/s</span>
                     </div>
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs text-slate-500" id="speed-label">1秒 = 1時間</span>
+                        <span class="text-xs text-slate-500" id="speed-label">1秒 = 6時間</span>
                         <div class="flex items-center gap-2">
                             <span class="text-xs text-slate-500">月:</span>
                             <select id="month-select" onchange="changeMonth(this.value)"
@@ -618,10 +618,10 @@
         const lettuce = new PlantSimulator();
         const weather = new WeatherGenerator();
 
-        let weatherData  = [];  // generateMonthData() の結果 (60日×24時間)
+        let weatherData  = [];  // generateMonthData() の結果 (45日×24時間)
         let weatherIndex = 0;   // 現在の時間インデックス
         let simAccum     = 0;   // 蓄積経過（シミュレーション時間・時間単位）
-        let simSpeed     = 1;    // 速度: 単位は時間/実秒 (1〜24)
+        let simSpeed     = 6;    // 速度: 単位は時間/実秒 (1〜24)
         let simPaused    = true; // true=停止中 / false=実行中
 
         let state = {
@@ -963,8 +963,8 @@
         }
 
         // --- グラフ描画 ---
-        // 全期間（最大 60日×24時間=1440点）を保持し全て表示
-        const CHART_MAX = 1440;
+        // 全期間（最大 45日×24時間=1080点）を保持し全て表示
+        const CHART_MAX = 1080;
         const chartData = {
             temp:   [],
             humid:  [],
@@ -986,7 +986,7 @@
         function drawChart(svgId, values, color, min, max, values2, color2) {
             const svg = document.getElementById(svgId);
             if (!svg || values.length < 2) return;
-            const W = 300, H = 100, PAD = 4;
+            const W = 300, H = 80, PAD = 4;
             const n = values.length;
             const range = max - min || 1;
             const pts = (arr) => arr.map((v, i) => {
@@ -1003,11 +1003,11 @@
 
             let extra = '';
             if (values2 && values2.length >= 2) {
-                extra = `<polyline points="${pts(values2)}" fill="none" stroke="${color2}" stroke-width="1.5" opacity="0.7"/>`;
+                extra = `<polyline points="${pts(values2)}" fill="none" stroke="${color2}" stroke-width="0.8" opacity="0.7"/>`;
             }
             svg.innerHTML = `
                 <rect width="300" height="80" rx="4" fill="#f8fafc"/>
-                <polyline points="${pts(values)}" fill="none" stroke="${color}" stroke-width="2"/>
+                <polyline points="${pts(values)}" fill="none" stroke="${color}" stroke-width="1"/>
                 ${extra}
                 <text x="${PAD}" y="12" text-anchor="start" font-size="9" fill="#94a3b8">${dayLabel}</text>
                 <text x="${W - PAD}" y="12" text-anchor="end" font-size="11" fill="${color}">${dispVal}</text>
@@ -1025,8 +1025,8 @@
 
         // 毎フレーム描画のみ行う（pushChartDataとは分離）
         function drawCharts() {
-            drawChart('chart-temp',   chartData.temp,   '#3b82f6', -5,  40);
-            drawChart('chart-humid',  chartData.humid,  '#0ea5e9',  0, 100);
+            drawChart('chart-temp',   chartData.temp,   '#3b82f6',  0,  35);
+            drawChart('chart-humid',  chartData.humid,  '#0ea5e9',  30, 100);
             drawChart('chart-light',  chartData.light,  '#f59e0b',  0, sunSettings.peakLux + 15000);
             drawChart('chart-growth', chartData.growth, '#22c55e',  0, 100, chartData.damage, '#f43f5e');
         }
@@ -1045,7 +1045,7 @@
                     simAccum -= 1.0;
 
                     if (weatherIndex >= weatherData.length) {
-                        // 60日データ終了 → 結果表示して停止
+                        // 45日データ終了 → 結果表示して停止
                         const lastW = weatherData[weatherData.length - 1];
                         showResult('completed', lastW.day);
                         break;
@@ -1457,7 +1457,7 @@
             const subtitles = {
                 harvested: `Day ${endDay}に収穫サイクルを達成しました`,
                 died:      `Day ${endDay}に植物が椒死しました`,
-                completed: `60日間のシミュレーションが完了しました`,
+                completed: `45日間のシミュレーションが完了しました`,
                 paused:    `Day ${endDay} 時点の評価です（再開できます）`
             };
 
@@ -1724,7 +1724,7 @@
             initWeather(4);
             addLog("Smart Farm OS initialized.");
             addLog("PlantSimulator (サニーレタス) 読み込み完了。", "success");
-            addLog("WeatherGenerator (東京・4月 60日分) 読み込み完了。", "success");
+            addLog("WeatherGenerator (東京・4月 45日分) 読み込み完了。", "success");
             addLog("速度スライダーを動かしてシミュレーションを開始してください。", "info");
             coreLoop();
         };
