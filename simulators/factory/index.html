@@ -454,7 +454,7 @@
                                     <select class="block-input sensor-select">
                                         <option value="light">light</option>
                                         <option value="temp">temp</option>
-                                        <option value="ec">ec</option>
+                                        <option value="water">water</option>
                                         <option value="hour">hour</option>
                                         <option value="day">day</option>
                                     </select>
@@ -478,21 +478,15 @@
                                 <div class="delete-btn" title="Delete block">✕</div>
                                 <span>led.set(</span>
                                 <select class="block-input led-lux-select" style="width:86px">
-                                    <option value="1000">1000 lx</option>
-                                    <option value="2000">2000 lx</option>
-                                    <option value="3000">3000 lx</option>
-                                    <option value="4000">4000 lx</option>
-                                    <option value="5000">5000 lx</option>
-                                    <option value="6000">6000 lx</option>
-                                    <option value="7000">7000 lx</option>
-                                    <option value="8000" selected>8000 lx</option>
-                                    <option value="9000">9000 lx</option>
-                                    <option value="10000">10000 lx</option>
-                                    <option value="11000">11000 lx</option>
-                                    <option value="12000">12000 lx</option>
-                                    <option value="13000">13000 lx</option>
-                                    <option value="14000">14000 lx</option>
-                                    <option value="15000">15000 lx</option>
+                                    <option value="2000">2000</option>
+                                    <option value="4000">4000</option>
+                                    <option value="6000">6000</option>
+                                    <option value="8000" selected>8000</option>
+                                    <option value="10000">10000</option>
+                                    <option value="12000">12000</option>
+                                    <option value="14000">14000</option>
+                                    <option value="16000">16000</option>
+                                    <option value="18000">18000</option>
                                 </select>
                                 <span>)</span>
                             </div>
@@ -500,9 +494,9 @@
                                 <div class="delete-btn" title="Delete block">✕</div>
                                 led.off()
                             </div>
-                            <div class="block block-action block-nutrient rounded" draggable="true" data-type="add_fertilizer">
+                            <div class="block block-action block-nutrient rounded" draggable="true" data-type="add_water">
                                 <div class="delete-btn" title="Delete block">✕</div>
-                                add_fertilizer()
+                                water.add(1)
                             </div>
                         </div>
 
@@ -704,7 +698,7 @@
                     let currentValue = 0;
                     if (sensorType === 'light') currentValue = state.sunLux;  // センサ値 = 太陽光のみ
                     if (sensorType === 'temp')  currentValue = state.temp;
-                    if (sensorType === 'ec')    currentValue = state.ec;
+                    if (sensorType === 'water') currentValue = state.waterLevel;
                     if (sensorType === 'hour')  currentValue = state.hour;
                     if (sensorType === 'day')   currentValue = state.day;  // 経過日数
 
@@ -730,7 +724,7 @@
         function applyAction(type) {
             switch(type) {
                 case 'led_off': state.ledActive = false; break;
-                case 'add_fertilizer': state.ec = Math.min(3.0, state.ec + 0.02); break;
+                case 'add_water': lettuce.addWater(1.0); state.waterLevel = lettuce.state.waterLevel; break;
             }
         }
 
@@ -1330,7 +1324,7 @@
 
             // 分析コメント生成
             const comments = [];
-            if (outcome === 'harvested') {
+            if (outcome === 'harvested' && state.damage < 0.05) {
                 comments.push({ icon: '✅', text: '理想的な成長サイクルを完遂しました！' });
             }
             // 主要因に基づくコメント（絶対値で判定）
