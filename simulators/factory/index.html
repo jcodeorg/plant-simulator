@@ -638,6 +638,18 @@
             logEl.innerHTML = `<div><span class="text-slate-500">[${time}]</span> <span class="${colors[type]}">${msg}</span></div>` + logEl.innerHTML;
         }
 
+        function setStatusBadge(running) {
+            const b = document.getElementById('status-badge');
+            if (!b) return;
+            if (running) {
+                b.textContent = '稼働中';
+                b.className = 'px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded';
+            } else {
+                b.textContent = '停止中';
+                b.className = 'px-2 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded';
+            }
+        }
+
         // --- ドラッグ＆ドロップ ---
         let draggedElement = null;
         document.addEventListener('dragstart', (e) => { 
@@ -1204,6 +1216,7 @@
             // 入力欄の最新値を確実に反映してから開始
             applyAndRegenerateWeather();
             simPaused = false;
+            setStatusBadge(true);
             const startBtn = document.getElementById('btn-start');
             startBtn.disabled = true;
             startBtn.className = 'flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed';
@@ -1220,6 +1233,7 @@
             simPaused = !simPaused;
             const pauseBtn = document.getElementById('btn-pause');
             if (simPaused) {
+                setStatusBadge(false);
                 pauseBtn.textContent = '▶ 再開';
                 pauseBtn.className = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
                 // 一時停止時に中間評価モーダルを表示
@@ -1227,6 +1241,7 @@
                 const cw = weatherData[ci];
                 showResult('paused', cw.day);
             } else {
+                setStatusBadge(true);
                 pauseBtn.textContent = '⏸ 一時停止';
                 pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
                 addLog('再開。', 'info');
@@ -1236,6 +1251,7 @@
         function resumeFromPause() {
             document.getElementById('result-modal').classList.add('hidden');
             simPaused = false;
+            setStatusBadge(true);
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.textContent = '⏸ 一時停止';
             pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
@@ -1257,6 +1273,7 @@
             if (!isPause) {
                 state.simFinished = true;
                 simPaused = true;
+                setStatusBadge(false);
                 // ボタンを終了状態に
                 const pauseBtn = document.getElementById('btn-pause');
                 if (pauseBtn) {
@@ -1502,6 +1519,7 @@
             pauseBtn.textContent = '⏸ 一時停止';
 
             simPaused = true;
+            setStatusBadge(false);
             state.simFinished = false;
             simStats = { maxGrowth: 0, ledOnHours: 0, totalHours: 0, ledCostAcc: 0 };
             csvLog   = [];
