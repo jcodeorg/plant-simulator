@@ -773,10 +773,10 @@
             pushCsvRow('手動ポンプ起動 EC+0.1');
         }
         function manualAddWater() {
-            lettuce.addWater(2.0);
+            lettuce.addWater(1.0);
             state.waterLevel = lettuce.state.waterLevel;
-            addLog('手動: 足し水 +2cm', 'info');
-            pushCsvRow('手動足し水 +2cm');
+            addLog('手動: 足し水 +1cm', 'info');
+            pushCsvRow('手動足し水 +1cm');
         }
 
         // --- タブ切り替え ---
@@ -895,12 +895,6 @@
 
                     // 総合光量 = 太陽光 + LED
                     state.light = state.sunLux + (state.ledActive ? state.ledLux : 0);
-
-                    // 水位が極端に低い場合の緊急補水
-                    if (lettuce.state.waterLevel < -4.0) {
-                        lettuce.addWater(6.0);
-                        addLog(`Day${w.day} ${String(w.hour).padStart(2, '0')}:00 自動灌水: +6cm`, "info");
-                    }
 
                     // PlantSimulator で1時間分更新 (dt=1.0)
                     const simStatus = lettuce.update(state.temp, state.humid, state.light, 1.0, w.hour);

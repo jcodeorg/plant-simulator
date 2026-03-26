@@ -59,7 +59,7 @@ class PlantSimulator {
         // --- 1. 水位変動 (蒸発 + 蒸散) ---
         const evap = this.config.ke * vpd;
         const trans = this.config.kt * this.state.growth * (l / (l + sp.kl)) * vpd;
-        this.state.waterLevel -= (evap + trans) * dt;
+        this.state.waterLevel -= (evap + trans) * dt * 3; // 水位変動をcm単位で表現 (蒸発・蒸散の影響を拡大して見やすくするため)
 
         // --- 2. 成長因子の計算 ---
         // 昼間フラグをローカル変数で判定
@@ -141,7 +141,7 @@ class PlantSimulator {
         // 環境ストレス (高温・湿度異常)
         const sE = Math.max(0, t - 26) * 0.1 + (Math.abs(h - 60) > 25 ? 0.05 : 0);
         // 水位ストレス (水切れは致命的)
-        const sW = this.state.waterLevel < -3.0 ? 0.3 : 0 // Math.abs(this.state.waterLevel) * 0.03;
+        const sW = this.state.waterLevel < -3.0 ? 0.3 : Math.abs(this.state.waterLevel) * 0.03;
         // 徒長・軟弱化ストレスとチップバーンによる品質低下
         const sTipburn = this.state.tipburn * 0.3;
         // etiolStep を累積せず /h 直接換算 — 他のストレス要因(sE, sW)と同様に扱う
