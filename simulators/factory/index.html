@@ -527,19 +527,27 @@
                     <p id="result-subtitle" class="text-xs text-slate-500 mt-0.5"></p>
                 </div>
             </div>
-            <!-- スコアグリッド: 4カラム -->
-            <div class="grid grid-cols-4 gap-2 mb-3">
+            <!-- スコアグリッド: 5カラム -->
+            <div class="grid grid-cols-5 gap-2 mb-3">
+                <div class="bg-slate-50 rounded-lg px-2 py-1.5 border border-slate-200 text-center">
+                    <p class="text-[9px] text-slate-500 font-bold uppercase">到達ステージ</p>
+                    <p class="text-xs font-bold text-slate-700 leading-tight mt-1" id="res-stage">-</p>
+                </div>
                 <div class="bg-purple-50 rounded-lg px-2 py-1.5 border border-purple-100 text-center">
                     <p class="text-[9px] text-purple-600 font-bold uppercase">最終成長率</p>
                     <p class="text-lg font-bold text-purple-700 leading-tight" id="res-growth">-</p>
+                </div>
+                <div class="bg-sky-50 rounded-lg px-2 py-1.5 border border-sky-100 text-center">
+                    <p class="text-[9px] text-sky-600 font-bold uppercase">経過日数</p>
+                    <p class="text-lg font-bold text-sky-700 leading-tight" id="res-days">-</p>
                 </div>
                 <div class="bg-rose-50 rounded-lg px-2 py-1.5 border border-rose-100 text-center">
                     <p class="text-[9px] text-rose-600 font-bold uppercase">ダメージ</p>
                     <p class="text-lg font-bold text-rose-600 leading-tight" id="res-damage">-</p>
                 </div>
-                <div class="bg-sky-50 rounded-lg px-2 py-1.5 border border-sky-100 text-center">
-                    <p class="text-[9px] text-sky-600 font-bold uppercase">経過日数</p>
-                    <p class="text-lg font-bold text-sky-700 leading-tight" id="res-days">-</p>
+                <div class="bg-yellow-50 rounded-lg px-2 py-1.5 border border-yellow-100 text-center">
+                    <p class="text-[9px] text-yellow-700 font-bold uppercase">電気代</p>
+                    <p class="text-base font-bold text-yellow-700 leading-tight mt-1" id="res-electric">-</p>
                 </div>
             </div>
             <!-- ダメージ要因分析 -->
@@ -547,32 +555,7 @@
                 <p class="text-[9px] text-rose-600 font-bold uppercase mb-1.5">📊 ダメージ主要因分析</p>
                 <div id="res-damage-breakdown" class="space-y-1"></div>
             </div>
-            <!-- 電気代 + 詳細 -->
-            <div class="grid grid-cols-2 gap-2 mb-3">
-                <div class="bg-yellow-50 rounded-lg px-3 py-1.5 border border-yellow-200 flex items-center justify-between">
-                    <div>
-                        <p class="text-[9px] text-yellow-700 font-bold uppercase">⚡ LED電気代</p>
-                        <p class="text-[9px] text-yellow-500 mt-0.5" id="res-electric-detail">-</p>
-                    </div>
-                    <p class="text-lg font-bold text-yellow-700" id="res-electric">-</p>
-                </div>
-                <div class="bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-200">
-                    <div class="grid grid-cols-3 gap-1 text-center">
-                        <div>
-                            <p class="text-[9px] text-slate-400">最高到達成長</p>
-                            <p class="text-xs font-bold text-slate-700" id="res-maxgrowth">-</p>
-                        </div>
-                        <div>
-                            <p class="text-[9px] text-slate-400">LED稼働率</p>
-                            <p class="text-xs font-bold text-slate-700" id="res-ledpct">-</p>
-                        </div>
-                        <div>
-                            <p class="text-[9px] text-slate-400">到達ステージ</p>
-                            <p class="text-xs font-bold text-slate-700" id="res-stage">-</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
             <!-- 分析コメント -->
             <div class="bg-slate-50 rounded-lg px-3 py-2 border border-slate-200 mb-3">
                 <p class="text-[9px] text-slate-500 font-bold uppercase mb-1">💡 分析</p>
@@ -1171,9 +1154,9 @@
             if (reqEl) reqEl.textContent = `💡 ${STAGE_MIN_LIGHT[si]}lx | 🌡️ ${STAGE_OPT_TEMP[si]}°C`;
             const growPct = document.getElementById('sens-growth-pct');
             if (growPct) growPct.textContent = `${state.growth.toFixed(1)}%`;
-            // 光量不足警告
+            // 光量不足警告（昼間 100lx 以上のときのみ表示）
             const lightWarn = document.getElementById('light-warn');
-            if (lightWarn) lightWarn.classList.toggle('hidden', state.light >= STAGE_MIN_LIGHT[si]);
+            if (lightWarn) lightWarn.classList.toggle('hidden', state.sunLux < 100 || state.light >= STAGE_MIN_LIGHT[si]);
 
             // --- LED インジケーター ---
             const ledT = document.getElementById('led-top');
@@ -1313,18 +1296,14 @@
             //document.getElementById('res-etiol').textContent    = `${(state.etiolation * 100).toFixed(1)}%`;
             const elapsedDays = (simStats.totalHours / 24).toFixed(1);
             document.getElementById('res-days').textContent     = `${elapsedDays}日`;
-            document.getElementById('res-maxgrowth').textContent = `${simStats.maxGrowth.toFixed(1)}%`;
             const ledPct = simStats.totalHours > 0
                 ? Math.round(simStats.ledOnHours / simStats.totalHours * 100) : 0;
-            document.getElementById('res-ledpct').textContent   = `${ledPct}%`;
             document.getElementById('res-stage').textContent    = state.stageName;
 
             // 電気代計算: 8000lx = 2.4円/h を基準に光量比例
             const electricCost = simStats.ledCostAcc.toFixed(0);
             const resElecEl = document.getElementById('res-electric');
             if (resElecEl) resElecEl.textContent = `¥${Number(electricCost).toLocaleString()}円`;
-            const resElecDetailEl = document.getElementById('res-electric-detail');
-            if (resElecDetailEl) resElecDetailEl.textContent = `LED ${simStats.ledOnHours}時間点灯（光量加重コスト）`;
 
             // ダメージ要因分析
             const dmgFactors = [
