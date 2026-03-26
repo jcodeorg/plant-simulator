@@ -1108,7 +1108,7 @@
                         `<span class="w-[58px] text-right shrink-0">累積</span>` +
                     `</div>` +
                     mkRow('🌡️', '高温・湿度', sb.env,     stressCumul.env,     'bg-orange-400', '気温 > 26°C、または湿度が適正外れるとダメージが発生') +
-                    mkRow('💧', '水分不足',   sb.water,   stressCumul.water,   'bg-blue-400',   '水位が下がりすぎると蓄積し、水切れは致命的') +
+                    mkRow('💧', '水過不足',   sb.water,   stressCumul.water,   'bg-blue-400',   '水位が下がりすぎると蓄積し、水切れは致命的') +
                     mkRow('🌿', '徒長',       sb.etiol,   stressCumul.etiol,   'bg-yellow-500', '光量不足で茎が徒長すると品質が低下') +
                     mkRow('🍂', 'チップバーン', sb.tipburn, stressCumul.tipburn, 'bg-red-400',    '高光・高温時にカルシウム不足で発生') +
                     (() => {
@@ -1313,7 +1313,7 @@
             // ダメージ要因分析
             const dmgFactors = [
                 { key: 'env',     label: '高温・湿度',   icon: '🌡️', color: 'bg-orange-400', tip: 'LED冷却や日陰対策・昼間の換気を強化してください。' },
-                { key: 'water',   label: '水分不足',     icon: '💧', color: 'bg-blue-400',   tip: '自動灌水ブロックで水位を一定に保つと改善できます。' },
+                { key: 'water',   label: '水過不足',     icon: '💧', color: 'bg-blue-400',   tip: '自動灌水ブロックで水位を一定に保つと改善できます。' },
                 { key: 'etiol',   label: '徒長',         icon: '🌿', color: 'bg-yellow-500', tip: 'LED照明を強化するか、日照時間を延長してください。' },
                 { key: 'tipburn', label: 'チップバーン', icon: '🍂', color: 'bg-red-400',    tip: 'ピーク照度を抑え、温度を下げると発生を抑制できます。' },
             ];
