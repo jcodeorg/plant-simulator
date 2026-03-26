@@ -537,10 +537,6 @@
                     <p class="text-[9px] text-rose-600 font-bold uppercase">ダメージ</p>
                     <p class="text-lg font-bold text-rose-600 leading-tight" id="res-damage">-</p>
                 </div>
-                <div class="bg-amber-50 rounded-lg px-2 py-1.5 border border-amber-100 text-center">
-                    <p class="text-[9px] text-amber-600 font-bold uppercase">徒長（累積）</p>
-                    <p class="text-lg font-bold text-amber-600 leading-tight" id="res-etiol">-</p>
-                </div>
                 <div class="bg-sky-50 rounded-lg px-2 py-1.5 border border-sky-100 text-center">
                     <p class="text-[9px] text-sky-600 font-bold uppercase">経過日数</p>
                     <p class="text-lg font-bold text-sky-700 leading-tight" id="res-days">-</p>
@@ -1314,7 +1310,7 @@
 
             document.getElementById('res-growth').textContent   = `${state.growth.toFixed(1)}%`;
             document.getElementById('res-damage').textContent   = `${(state.damage * 100).toFixed(1)}%`;
-            document.getElementById('res-etiol').textContent    = `${(state.etiolation * 100).toFixed(1)}%`;
+            //document.getElementById('res-etiol').textContent    = `${(state.etiolation * 100).toFixed(1)}%`;
             const elapsedDays = (simStats.totalHours / 24).toFixed(1);
             document.getElementById('res-days').textContent     = `${elapsedDays}日`;
             document.getElementById('res-maxgrowth').textContent = `${simStats.maxGrowth.toFixed(1)}%`;
