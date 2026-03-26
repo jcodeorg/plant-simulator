@@ -116,7 +116,7 @@ class PlantSimulator {
                 deltaG = cost * conversionRate;
                 // 夜温過剰による軟弱化（光は足りているが高温で細胞が過剰伸長する）
                 if (!isGerminating && t > 22) {
-                    etiolStep = (t - 22) * 0.004 * sp.etiolSens * 0.1; // 軟弱化は穏やかに進行
+                    etiolStep = (t - 22) * 0.004 * sp.etiolSens;
                 }
             }
         }
@@ -145,12 +145,12 @@ class PlantSimulator {
         // 徒長・軟弱化ストレスとチップバーンによる品質低下
         const sTipburn = this.state.tipburn * 0.3;
         // etiolStep を累積せず /h 直接換算 — 他のストレス要因(sE, sW)と同様に扱う
-        const sEtiol   = etiolStep;  // 光不足・夜温過剰による組織劣化 (max ≈ 0.15〜0.2)
+        const sEtiol   = etiolStep * 10;  // 光不足・夜温過剰による組織劣化 (max ≈ 0.15〜0.2)
 
         const dmgE = sE * this.config.damageCoeff;
         const dmgW = sW * this.config.damageCoeff;
         const dmgT = sTipburn * this.config.damageCoeff;
-        const dmgEt = sEtiol;
+        const dmgEt = sEtiol * this.config.damageCoeff;
         const recov = this.config.recoveryRate;
 
         const netDamage = Math.max(0, dmgE + dmgW + dmgT - recov) + dmgEt; // 徒長ストレスは回復で相殺されない（自然回復は主に環境ストレスの回復を表すため）
@@ -166,7 +166,7 @@ class PlantSimulator {
             stressBreakdown: {
                 env:      dmgE    * dt,  // 現時点の環境ストレス/h
                 water:    dmgW    * dt,  // 水分ストレス/h
-                etiol:    dmgEt   * dt,  // 徒長・軟弱化ストレス/h (直接換算)
+                etiol:    dmgEt   * dt,  // 徒長・軟弱化ストレス/h
                 tipburn:  dmgT    * dt,  // チップバーンストレス/h
                 recovery: recov   * dt,  // 自然回復/h
                 net:      netDamage * dt  // 正味ダメージ変化/h
