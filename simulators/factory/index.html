@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; overflow-x: hidden; background-color: #f0f4f8; }
-        .block-container { height: 380px; overflow-y: auto; }
+        .block-container { height: 570px; overflow-y: auto; }
         
         /* ブロックの基本スタイル */
         .block { 
@@ -443,28 +443,50 @@
                 <!-- コードタブ -->
                 <div id="panel-code" style="display:none">
                     <div class="grid grid-cols-12 gap-3">
-                        <div class="col-span-5 bg-slate-50 p-3 rounded-xl border border-slate-200 block-container">
+                        <div class="col-span-6 bg-slate-50 p-3 rounded-xl border border-slate-200 block-container">
                             <p class="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Code Blocks</p>
                             
                             <!-- 条件ブロック -->
                             <div class="block block-if text-white rounded shadow-sm overflow-hidden mb-4" draggable="true" data-type="custom_if_else">
                                 <div class="delete-btn" title="Delete block">✕</div>
-                                <div class="p-2 bg-orange-500 flex items-center gap-1 flex-wrap pr-8">
-                                    <span class="py-keyword">if</span>
-                                    <select class="block-input sensor-select">
-                                        <option value="light">light</option>
-                                        <option value="temp">temp</option>
-                                        <option value="water">water</option>
-                                        <option value="hour">hour</option>
-                                        <option value="day">day</option>
-                                    </select>
-                                    <select class="block-input operator-select">
-                                        <option value="lt">&lt;</option>
-                                        <option value="gt">&gt;</option>
-                                        <option value="eq">==</option>
-                                    </select>
-                                    <input type="number" class="block-input value-input" value="5000" step="100">
-                                    <span class="py-keyword">:</span>
+                                <div class="p-2.5 bg-orange-500 flex flex-col gap-1.5 pr-8">
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <span class="py-keyword">if</span>
+                                        <select class="block-input sensor-select">
+                                            <option value="light">light</option>
+                                            <option value="temp">temp</option>
+                                            <option value="water">water</option>
+                                            <option value="hour">hour</option>
+                                            <option value="day">day</option>
+                                        </select>
+                                        <select class="block-input operator-select">
+                                            <option value="lt">&lt;</option>
+                                            <option value="gt">&gt;</option>
+                                            <option value="eq">==</option>
+                                        </select>
+                                        <input type="number" class="block-input value-input" value="5000" step="100">
+                                    </div>
+                                    <div class="flex items-center gap-1.5 flex-wrap logic-row">
+                                        <select class="block-input logic-select" style="width:54px" onchange="updateLogicRow(this)">
+                                            <option value="none">--</option>
+                                            <option value="and">and</option>
+                                            <option value="or">or</option>
+                                        </select>
+                                        <select class="block-input sensor-select2" style="opacity:0.35">
+                                            <option value="light">light</option>
+                                            <option value="temp">temp</option>
+                                            <option value="water">water</option>
+                                            <option value="hour">hour</option>
+                                            <option value="day">day</option>
+                                        </select>
+                                        <select class="block-input operator-select2" style="opacity:0.35">
+                                            <option value="lt">&lt;</option>
+                                            <option value="gt">&gt;</option>
+                                            <option value="eq">==</option>
+                                        </select>
+                                        <input type="number" class="block-input value-input2" value="20" step="1" style="opacity:0.35">
+                                        <span class="py-keyword">:</span>
+                                    </div>
                                 </div>
                                 <div class="slot" data-role="then"></div>
                                 <div class="p-1 bg-orange-600 px-2 flex items-center">
@@ -500,8 +522,8 @@
                             </div>
                         </div>
 
-                        <div class="col-span-7">
-                            <div id="workspace" class="drop-zone p-3 overflow-auto max-h-[380px] font-mono"></div>
+                        <div class="col-span-6">
+                            <div id="workspace" class="drop-zone p-3 overflow-auto max-h-[570px] font-mono"></div>
                             <p class="text-[10px] text-slate-400 mt-2">※ブロックをドラッグして条件を組み立ててください。</p>
                         </div>
                     </div>
@@ -682,6 +704,8 @@
                     const inputs = draggedElement.querySelectorAll('input');
                     const cloneInputs = blockToDrop.querySelectorAll('input');
                     inputs.forEach((inpt, i) => cloneInputs[i].value = inpt.value);
+                    const logicSel = blockToDrop.querySelector('.logic-select');
+                    if (logicSel) updateLogicRow(logicSel);
 
                     const btn = blockToDrop.querySelector('.delete-btn');
                     if (btn) {
@@ -699,26 +723,50 @@
         });
 
         // --- 実行エンジン ---
+        function getSensorValue(sensorType) {
+            if (sensorType === 'light') return state.sunLux;
+            if (sensorType === 'temp')  return state.temp;
+            if (sensorType === 'water') return state.waterLevel;
+            if (sensorType === 'hour')  return state.hour;
+            if (sensorType === 'day')   return state.day;
+            return 0;
+        }
+
+        function evalOneCondition(sensorType, operator, targetValue) {
+            const cv = getSensorValue(sensorType);
+            if (operator === 'lt') return cv < targetValue;
+            if (operator === 'gt') return cv > targetValue;
+            if (operator === 'eq') return Math.abs(cv - targetValue) < 1;
+            return false;
+        }
+
+        function updateLogicRow(sel) {
+            const row = sel.closest('.logic-row');
+            const active = sel.value !== 'none';
+            row.querySelectorAll('.sensor-select2, .operator-select2, .value-input2').forEach(el => {
+                el.style.opacity = active ? '1' : '0.35';
+            });
+        }
+
         function executeBlockList(elementList) {
             for (let block of elementList) {
                 const type = block.dataset.type;
                 if (type === 'custom_if_else') {
-                    const sensorType = block.querySelector('.sensor-select').value;
-                    const operator = block.querySelector('.operator-select').value;
-                    const targetValue = parseFloat(block.querySelector('.value-input').value);
-                    
-                    let currentValue = 0;
-                    if (sensorType === 'light') currentValue = state.sunLux;  // センサ値 = 太陽光のみ
-                    if (sensorType === 'temp')  currentValue = state.temp;
-                    if (sensorType === 'water') currentValue = state.waterLevel;
-                    if (sensorType === 'hour')  currentValue = state.hour;
-                    if (sensorType === 'day')   currentValue = state.day;  // 経過日数
-
-                    let condition = false;
-                    if (operator === 'lt') condition = currentValue < targetValue;
-                    if (operator === 'gt') condition = currentValue > targetValue;
-                    if (operator === 'eq') condition = Math.abs(currentValue - targetValue) < 1;
-
+                    let condition = evalOneCondition(
+                        block.querySelector('.sensor-select').value,
+                        block.querySelector('.operator-select').value,
+                        parseFloat(block.querySelector('.value-input').value)
+                    );
+                    const logic = block.querySelector('.logic-select')?.value || 'none';
+                    if (logic !== 'none') {
+                        const cond2 = evalOneCondition(
+                            block.querySelector('.sensor-select2').value,
+                            block.querySelector('.operator-select2').value,
+                            parseFloat(block.querySelector('.value-input2').value)
+                        );
+                        if (logic === 'and') condition = condition && cond2;
+                        if (logic === 'or')  condition = condition || cond2;
+                    }
                     const thenSlot = block.querySelector('[data-role="then"]');
                     const elseSlot = block.querySelector('[data-role="else"]');
                     executeBlockList(condition ? thenSlot.children : elseSlot.children);
