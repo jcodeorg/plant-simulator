@@ -71,7 +71,7 @@
             font-family: monospace;
         }
         select.block-input { cursor: pointer; }
-        input[type="number"].block-input { width: 70px; }
+        input[type="number"].block-input { width: 56px; }
 
         .slot {
             min-height: 32px;
@@ -466,25 +466,25 @@
                                         </select>
                                         <input type="number" class="block-input value-input" value="5000" step="100">
                                     </div>
-                                    <div class="flex items-center gap-1.5 flex-wrap logic-row">
+                                    <div class="flex items-center gap-1.5 flex-wrap logic-row" style="opacity:0.4">
                                         <select class="block-input logic-select" style="width:54px" onchange="updateLogicRow(this)">
                                             <option value="none">--</option>
                                             <option value="and">and</option>
                                             <option value="or">or</option>
                                         </select>
-                                        <select class="block-input sensor-select2" style="opacity:0.35">
+                                        <select class="block-input sensor-select2">
                                             <option value="light">light</option>
                                             <option value="temp">temp</option>
                                             <option value="water">water</option>
                                             <option value="hour">hour</option>
                                             <option value="day">day</option>
                                         </select>
-                                        <select class="block-input operator-select2" style="opacity:0.35">
+                                        <select class="block-input operator-select2">
                                             <option value="lt">&lt;</option>
                                             <option value="gt">&gt;</option>
                                             <option value="eq">==</option>
                                         </select>
-                                        <input type="number" class="block-input value-input2" value="20" step="1" style="opacity:0.35">
+                                        <input type="number" class="block-input value-input2" value="20" step="1">
                                         <span class="py-keyword">:</span>
                                     </div>
                                 </div>
@@ -524,11 +524,31 @@
 
                         <div class="col-span-6">
                             <div id="workspace" class="drop-zone p-3 overflow-auto max-h-[570px] font-mono"></div>
-                            <p class="text-[10px] text-slate-400 mt-2">※ブロックをドラッグして条件を組み立ててください。</p>
+                            <div class="flex items-center justify-between mt-2">
+                                <p class="text-[10px] text-slate-400">※ブロックをドラッグして条件を組み立ててください。</p>
+                                <button onclick="showPythonCode()" class="text-[11px] bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-3 py-1 rounded-full transition">
+                                    🐍 Python書き出し
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
+            </div>
+        </div>
+    </div>
+
+    <!-- Python書き出しモーダル -->
+    <div id="python-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 px-5 py-4 w-full max-w-2xl mx-3">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-bold text-slate-800">🐍 Pythonコード書き出し</h2>
+                <button onclick="document.getElementById('python-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-lg leading-none">&times;</button>
+            </div>
+            <pre id="python-output" class="bg-slate-900 text-green-300 text-xs rounded-xl p-4 overflow-auto max-h-[60vh] font-mono whitespace-pre"></pre>
+            <div class="flex gap-2 mt-3">
+                <button onclick="copyPythonCode()" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 rounded-full text-sm transition">📋 コピー</button>
+                <button onclick="document.getElementById('python-modal').classList.add('hidden')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-full text-sm transition">閉じる</button>
             </div>
         </div>
     </div>
@@ -743,8 +763,81 @@
         function updateLogicRow(sel) {
             const row = sel.closest('.logic-row');
             const active = sel.value !== 'none';
-            row.querySelectorAll('.sensor-select2, .operator-select2, .value-input2').forEach(el => {
-                el.style.opacity = active ? '1' : '0.35';
+            row.style.opacity = active ? '1' : '0.4';
+        }
+
+        // --- Python書き出し ---
+        const OP_PY  = { lt: '<', gt: '>', eq: '==' };
+        const ACT_PY = {
+            led_set: (b) => `led.set(${b.querySelector('.led-lux-select')?.value || 8000})`,
+            led_off: ()  => 'led.off()',
+            add_water:()  => 'water.add(1)',
+        };
+
+        function genPyBlocks(elementList, indent) {
+            const pad = '    '.repeat(indent);
+            let lines = [];
+            for (const block of elementList) {
+                const type = block.dataset?.type;
+                if (!type) continue;
+                if (type === 'custom_if_else') {
+                    const s1  = block.querySelector('.sensor-select').value;
+                    const op1 = OP_PY[block.querySelector('.operator-select').value];
+                    const v1  = block.querySelector('.value-input').value;
+                    const logic = block.querySelector('.logic-select')?.value || 'none';
+                    let cond = `${s1} ${op1} ${v1}`;
+                    if (logic !== 'none') {
+                        const s2  = block.querySelector('.sensor-select2').value;
+                        const op2 = OP_PY[block.querySelector('.operator-select2').value];
+                        const v2  = block.querySelector('.value-input2').value;
+                        cond += ` ${logic} ${s2} ${op2} ${v2}`;
+                    }
+                    lines.push(`${pad}if ${cond}:`);
+                    const thenChildren = block.querySelector('[data-role="then"]').children;
+                    const thenLines = genPyBlocks(thenChildren, indent + 1);
+                    lines.push(...(thenLines.length ? thenLines : [`${'    '.repeat(indent+1)}pass`]));
+                    lines.push(`${pad}else:`);
+                    const elseChildren = block.querySelector('[data-role="else"]').children;
+                    const elseLines = genPyBlocks(elseChildren, indent + 1);
+                    lines.push(...(elseLines.length ? elseLines : [`${'    '.repeat(indent+1)}pass`]));
+                } else if (ACT_PY[type]) {
+                    lines.push(`${pad}${ACT_PY[type](block)}`);
+                }
+            }
+            return lines;
+        }
+
+        function generatePython() {
+            const header = [
+                '# PlantSimulator 制御ロジック (自動生成)',
+                '# センサー変数: light, temp, water, hour, day',
+                '# アクション: led.set(lux), led.off(), water.add(cm)',
+                '',
+                'def control_loop(sensors):',
+                '    light = sensors.get("light", 0)',
+                '    temp  = sensors.get("temp",  0)',
+                '    water = sensors.get("water", 0)',
+                '    hour  = sensors.get("hour",  0)',
+                '    day   = sensors.get("day",   1)',
+                '',
+            ];
+            const ws = document.getElementById('workspace');
+            const bodyLines = genPyBlocks(ws.children, 1);
+            const body = bodyLines.length ? bodyLines : ['    pass'];
+            return [...header, ...body].join('\n');
+        }
+
+        function showPythonCode() {
+            document.getElementById('python-output').textContent = generatePython();
+            document.getElementById('python-modal').classList.remove('hidden');
+        }
+
+        function copyPythonCode() {
+            const code = document.getElementById('python-output').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target;
+                btn.textContent = '✅ コピーしました';
+                setTimeout(() => btn.textContent = '📋 コピー', 1500);
             });
         }
 
