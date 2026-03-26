@@ -28,7 +28,7 @@
             min-width: 280px; /* 横幅をスリム化 */
         }
         .block-action {
-            padding: 8px 12px;
+            padding: 5px 8px;
             background-color: #3b82f6;
             color: white;
             border-bottom: 3px solid rgba(0,0,0,0.2);
@@ -74,15 +74,15 @@
         input[type="number"].block-input { width: 56px; }
 
         .slot {
-            min-height: 32px;
+            min-height: 28px;
             background-color: rgba(255, 255, 255, 0.15);
-            margin: 4px 4px 4px 24px;
+            margin: 2px 2px 2px 16px;
             border-radius: 4px;
             border: 1px dashed rgba(255, 255, 255, 0.3);
             display: flex;
             flex-direction: column;
             gap: 2px;
-            padding: 4px;
+            padding: 2px;
         }
 
         .drop-zone { min-height: 300px; border: 2px dashed #cbd5e1; border-radius: 8px; background: white; }
@@ -443,13 +443,13 @@
                 <!-- コードタブ -->
                 <div id="panel-code" style="display:none">
                     <div class="grid grid-cols-12 gap-3">
-                        <div class="col-span-6 bg-slate-50 p-3 rounded-xl border border-slate-200 block-container">
-                            <p class="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Code Blocks</p>
+                        <div class="col-span-5 bg-slate-50 p-2 rounded-xl border border-slate-200 block-container">
+                            <p class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Code Blocks</p>
                             
                             <!-- 条件ブロック -->
-                            <div class="block block-if text-white rounded shadow-sm overflow-hidden mb-4" draggable="true" data-type="custom_if_else">
+                            <div class="block block-if text-white rounded shadow-sm overflow-hidden mb-2" draggable="true" data-type="custom_if_else">
                                 <div class="delete-btn" title="Delete block">✕</div>
-                                <div class="p-2.5 bg-orange-500 flex flex-col gap-1.5 pr-8">
+                                <div class="p-1.5 bg-orange-500 flex flex-col gap-1 pr-8">
                                     <div class="flex items-center gap-1 flex-wrap">
                                         <span class="py-keyword">if</span>
                                         <select class="block-input sensor-select">
@@ -518,11 +518,11 @@
                             </div>
                             <div class="block block-action block-nutrient rounded" draggable="true" data-type="add_water">
                                 <div class="delete-btn" title="Delete block">✕</div>
-                                water.add(1)
+                                add_water(1)
                             </div>
                         </div>
 
-                        <div class="col-span-6">
+                        <div class="col-span-7">
                             <div id="workspace" class="drop-zone p-3 overflow-auto max-h-[570px] font-mono"></div>
                             <p class="text-[10px] text-slate-400 mt-2">※ブロックをドラッグして条件を組み立ててください。</p>
                             <button onclick="showPythonCode()" class="mt-2 w-full text-[11px] bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-full transition">
@@ -780,7 +780,7 @@
         const ACT_PY = {
             led_set: (b) => `led.set(${b.querySelector('.led-lux-select')?.value || 8000})`,
             led_off: ()  => 'led.off()',
-            add_water:()  => 'water.add(1)',
+            add_water:()  => 'add_water(1)',
         };
 
         // querySelector の代わりに直接の子孫のみを対象にするヘルパー
@@ -836,15 +836,16 @@
         function generatePython() {
             const header = [
                 '# PlantSimulator 制御ロジック (自動生成)',
-                '# アクション: led.set(lux), led.off(), water.add(cm)',
-                '',
-                'light = sensors.get("light")',
-                'temp  = sensors.get("temp")',
-                'water = sensors.get("water")',
-                'hour  = sensors.get("hour")',
-                'day   = sensors.get("day")',
+                '# アクション: led.set(lux), led.off(), add_water(cm)',
                 '',
                 'while True:',
+                '    # センサー値の取得',
+                '    light = sensors.get("light")',
+                '    temp  = sensors.get("temp")',
+                '    water = sensors.get("water")',
+                '    hour  = sensors.get("hour")',
+                '    day   = sensors.get("day")',
+                '    # 制御ロジック',
             ];
             const ws = document.getElementById('workspace');
             const bodyLines = genPyBlocks(ws.children, 1);
