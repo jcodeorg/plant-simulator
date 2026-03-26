@@ -190,7 +190,10 @@
                     <h2 class="text-xl font-bold text-slate-800 flex items-center">
                         <span class="mr-2">🏪</span> 植物ショーケース
                     </h2>
-                    <span id="status-badge" class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">稼働中</span>
+                    <div class="flex items-center gap-2">
+                        <span id="sim-clock" class="text-sm font-mono font-bold bg-slate-100 px-3 py-1 rounded text-slate-700">Day 1 - 00:00</span>
+                        <span id="status-badge" class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">稼働中</span>
+                    </div>
                 </div>
                 
                 <div class="showcase" id="main-showcase">
@@ -209,7 +212,6 @@
                 <div class="mt-2 border-t border-slate-100 pt-2">
                     <div class="flex items-center justify-between mb-2">
                         <h3 class="font-bold text-slate-700 text-sm">⏱ シミュレーション制御</h3>
-                        <span id="sim-clock" class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">Day 1 - 00:00</span>
                     </div>
                     <div class="flex gap-2 mb-2">
                         <button id="btn-start" onclick="startSim()"
@@ -420,22 +422,22 @@
 
                 <!-- チャートタブ -->
                 <div id="panel-chart" class="overflow-y-auto" style="display:none; max-height:calc(100vh - 5.5rem)">
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="flex flex-col gap-2">
                         <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
                             <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌡️ 気温 (°C)</p>
-                            <div class="chart-wrap"><svg id="chart-temp" width="100%" height="100" viewBox="0 0 300 100" preserveAspectRatio="none"></svg></div>
+                            <div class="chart-wrap"><svg id="chart-temp" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
                         </div>
                         <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
                             <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">💧 湿度 (%)</p>
-                            <div class="chart-wrap"><svg id="chart-humid" width="100%" height="100" viewBox="0 0 300 100" preserveAspectRatio="none"></svg></div>
+                            <div class="chart-wrap"><svg id="chart-humid" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
                         </div>
                         <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
                             <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">☀️ 光量 (lx)</p>
-                            <div class="chart-wrap"><svg id="chart-light" width="100%" height="100" viewBox="0 0 300 100" preserveAspectRatio="none"></svg></div>
+                            <div class="chart-wrap"><svg id="chart-light" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
                         </div>
                         <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
                             <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌱 成長率 / ダメージ</p>
-                            <div class="chart-wrap"><svg id="chart-growth" width="100%" height="100" viewBox="0 0 300 100" preserveAspectRatio="none"></svg></div>
+                            <div class="chart-wrap"><svg id="chart-growth" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
                         </div>
                     </div>
                 </div>
