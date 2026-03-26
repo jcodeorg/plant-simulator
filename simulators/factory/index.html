@@ -489,7 +489,7 @@
                                     </div>
                                 </div>
                                 <div class="slot" data-role="then"></div>
-                                <div class="p-1 bg-orange-600 px-2 flex items-center">
+                                <div class="p-1 bg-orange-600 px-2 flex items-center else-bar">
                                     <span class="py-keyword text-xs">else:</span>
                                 </div>
                                 <div class="slot" data-role="else"></div>
@@ -524,12 +524,10 @@
 
                         <div class="col-span-6">
                             <div id="workspace" class="drop-zone p-3 overflow-auto max-h-[570px] font-mono"></div>
-                            <div class="flex items-center justify-between mt-2">
-                                <p class="text-[10px] text-slate-400">※ブロックをドラッグして条件を組み立ててください。</p>
-                                <button onclick="showPythonCode()" class="text-[11px] bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-3 py-1 rounded-full transition">
-                                    🐍 Python書き出し
-                                </button>
-                            </div>
+                            <p class="text-[10px] text-slate-400 mt-2">※ブロックをドラッグして条件を組み立ててください。</p>
+                            <button onclick="showPythonCode()" class="mt-2 w-full text-[11px] bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-full transition">
+                                🐍 Python書き出し
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -732,12 +730,14 @@
                         btn.onclick = (ev) => {
                             ev.stopPropagation();
                             blockToDrop.remove();
+                            updateElseBars();
                         };
                     }
                 } else { 
                     blockToDrop = draggedElement; 
                 }
                 target.appendChild(blockToDrop);
+                updateElseBars();
             }
             draggedElement = null;
         });
@@ -766,6 +766,15 @@
             row.style.opacity = active ? '1' : '0.4';
         }
 
+        function updateElseBars() {
+            document.querySelectorAll('[data-role="else"]').forEach(slot => {
+                const bar = slot.previousElementSibling;
+                if (bar && bar.classList.contains('else-bar')) {
+                    bar.style.opacity = slot.children.length === 0 ? '0.35' : '1';
+                }
+            });
+        }
+
         // --- Python書き出し ---
         const OP_PY  = { lt: '<', gt: '>', eq: '==' };
         const ACT_PY = {
@@ -774,6 +783,21 @@
             add_water:()  => 'water.add(1)',
         };
 
+        // querySelector の代わりに直接の子孫のみを対象にするヘルパー
+        // (入れ子ifブロックで内側の要素を誤って拾わないようにするため)
+        function qsOwn(block, selector) {
+            // block直下の要素からselectorに一致する最初のものを返す
+            for (const child of block.children) {
+                if (child.matches(selector)) return child;
+                // スロット以外の直接子（ヘッダー div など）の中だけ再帰
+                if (!child.dataset?.role) {
+                    const found = qsOwn(child, selector);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
         function genPyBlocks(elementList, indent) {
             const pad = '    '.repeat(indent);
             let lines = [];
@@ -781,25 +805,27 @@
                 const type = block.dataset?.type;
                 if (!type) continue;
                 if (type === 'custom_if_else') {
-                    const s1  = block.querySelector('.sensor-select').value;
-                    const op1 = OP_PY[block.querySelector('.operator-select').value];
-                    const v1  = block.querySelector('.value-input').value;
-                    const logic = block.querySelector('.logic-select')?.value || 'none';
+                    const s1  = qsOwn(block, '.sensor-select').value;
+                    const op1 = OP_PY[qsOwn(block, '.operator-select').value];
+                    const v1  = qsOwn(block, '.value-input').value;
+                    const logic = qsOwn(block, '.logic-select')?.value || 'none';
                     let cond = `${s1} ${op1} ${v1}`;
                     if (logic !== 'none') {
-                        const s2  = block.querySelector('.sensor-select2').value;
-                        const op2 = OP_PY[block.querySelector('.operator-select2').value];
-                        const v2  = block.querySelector('.value-input2').value;
+                        const s2  = qsOwn(block, '.sensor-select2').value;
+                        const op2 = OP_PY[qsOwn(block, '.operator-select2').value];
+                        const v2  = qsOwn(block, '.value-input2').value;
                         cond += ` ${logic} ${s2} ${op2} ${v2}`;
                     }
                     lines.push(`${pad}if ${cond}:`);
-                    const thenChildren = block.querySelector('[data-role="then"]').children;
-                    const thenLines = genPyBlocks(thenChildren, indent + 1);
+                    const thenSlot = [...block.children].find(c => c.dataset?.role === 'then');
+                    const thenLines = genPyBlocks(thenSlot ? thenSlot.children : [], indent + 1);
                     lines.push(...(thenLines.length ? thenLines : [`${'    '.repeat(indent+1)}pass`]));
-                    lines.push(`${pad}else:`);
-                    const elseChildren = block.querySelector('[data-role="else"]').children;
-                    const elseLines = genPyBlocks(elseChildren, indent + 1);
-                    lines.push(...(elseLines.length ? elseLines : [`${'    '.repeat(indent+1)}pass`]));
+                    const elseSlot = [...block.children].find(c => c.dataset?.role === 'else');
+                    const elseLines = genPyBlocks(elseSlot ? elseSlot.children : [], indent + 1);
+                    if (elseLines.length) {
+                        lines.push(`${pad}else:`);
+                        lines.push(...elseLines);
+                    }
                 } else if (ACT_PY[type]) {
                     lines.push(`${pad}${ACT_PY[type](block)}`);
                 }
@@ -810,16 +836,15 @@
         function generatePython() {
             const header = [
                 '# PlantSimulator 制御ロジック (自動生成)',
-                '# センサー変数: light, temp, water, hour, day',
                 '# アクション: led.set(lux), led.off(), water.add(cm)',
                 '',
-                'def control_loop(sensors):',
-                '    light = sensors.get("light", 0)',
-                '    temp  = sensors.get("temp",  0)',
-                '    water = sensors.get("water", 0)',
-                '    hour  = sensors.get("hour",  0)',
-                '    day   = sensors.get("day",   1)',
+                'light = sensors.get("light")',
+                'temp  = sensors.get("temp")',
+                'water = sensors.get("water")',
+                'hour  = sensors.get("hour")',
+                'day   = sensors.get("day")',
                 '',
+                'while True:',
             ];
             const ws = document.getElementById('workspace');
             const bodyLines = genPyBlocks(ws.children, 1);
@@ -846,22 +871,22 @@
                 const type = block.dataset.type;
                 if (type === 'custom_if_else') {
                     let condition = evalOneCondition(
-                        block.querySelector('.sensor-select').value,
-                        block.querySelector('.operator-select').value,
-                        parseFloat(block.querySelector('.value-input').value)
+                        qsOwn(block, '.sensor-select').value,
+                        qsOwn(block, '.operator-select').value,
+                        parseFloat(qsOwn(block, '.value-input').value)
                     );
-                    const logic = block.querySelector('.logic-select')?.value || 'none';
+                    const logic = qsOwn(block, '.logic-select')?.value || 'none';
                     if (logic !== 'none') {
                         const cond2 = evalOneCondition(
-                            block.querySelector('.sensor-select2').value,
-                            block.querySelector('.operator-select2').value,
-                            parseFloat(block.querySelector('.value-input2').value)
+                            qsOwn(block, '.sensor-select2').value,
+                            qsOwn(block, '.operator-select2').value,
+                            parseFloat(qsOwn(block, '.value-input2').value)
                         );
                         if (logic === 'and') condition = condition && cond2;
                         if (logic === 'or')  condition = condition || cond2;
                     }
-                    const thenSlot = block.querySelector('[data-role="then"]');
-                    const elseSlot = block.querySelector('[data-role="else"]');
+                    const thenSlot = [...block.children].find(c => c.dataset?.role === 'then');
+                    const elseSlot = [...block.children].find(c => c.dataset?.role === 'else');
                     executeBlockList(condition ? thenSlot.children : elseSlot.children);
                 } else if (type === 'led_set') {
                     const sel = block.querySelector('.led-lux-select');
