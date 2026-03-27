@@ -219,13 +219,17 @@
                         <h3 class="font-bold text-slate-700 text-sm">⏱ シミュレーション制御</h3>
                     </div>
                     <div class="flex gap-2 mb-2">
-                        <button id="btn-start" onclick="startSim()"
+                        <button id="btn-start" onclick="startOrReset()" data-mode="start"
                                 class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-full text-sm transition">
                             ▶︎ 開始
                         </button>
                         <button id="btn-pause" onclick="togglePause()" disabled
                                 class="flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed">
                             ⏸ 一時停止
+                        </button>
+                        <button id="btn-csv" onclick="downloadCSV()"
+                                class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition">
+                            📥 CSV
                         </button>
                     </div>
                     <div class="flex items-center gap-3 mb-2">
@@ -337,12 +341,7 @@
                     </div>
                     <!-- 分析コメント -->
                     <ul id="result-comments" class="text-[11px] text-slate-700 space-y-0.5 list-none mb-2"></ul>
-                    <!-- ボタン -->
-                    <div class="flex gap-1.5">
-                        <button id="res-resume-btn" onclick="resumeFromPause()" class="hidden flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-full transition text-xs">▶ 再開する</button>
-                        <button onclick="downloadCSV()" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full transition text-xs">📥 CSV</button>
-                        <button id="res-reset-btn" onclick="resetSim()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-full transition text-xs">🔄 リセット</button>
-                    </div>
+
                 </div>
             </div>
 
@@ -1347,6 +1346,15 @@
         }
 
         // --- 速度・天候制御 ---
+        function startOrReset() {
+            const startBtn = document.getElementById('btn-start');
+            if (startBtn.dataset.mode === 'reset') {
+                resetSim();
+            } else {
+                startSim();
+            }
+        }
+
         function startSim() {
             if (state.simFinished) return;
             // 入力欄の最新値を確実に反映してから開始
@@ -1354,9 +1362,9 @@
             simPaused = false;
             setStatusBadge(true);
             const startBtn = document.getElementById('btn-start');
-            startBtn.disabled = true;
-            startBtn.className = 'flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed';
-            startBtn.textContent = '▶︎ 開始';
+            startBtn.dataset.mode = 'reset';
+            startBtn.className = 'flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 rounded-full text-sm transition';
+            startBtn.textContent = '🔄 リセット';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = false;
             pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
@@ -1491,12 +1499,6 @@
             };
             inner.className = `rounded-xl border-2 px-3 py-2 ${panelStyles[outcome] || ''}`;
 
-            // 再開ボタンは一時停止時のみ表示
-            const resumeBtn = document.getElementById('res-resume-btn');
-            if (resumeBtn) resumeBtn.classList.toggle('hidden', !isPause);
-            const resetBtn = document.getElementById('res-reset-btn');
-            if (resetBtn) resetBtn.textContent = isPause ? '🔄 リセット' : '🔄 新しいシミュレーション';
-
             if (isPause) addLog(`Day ${endDay} 一時停止。`, 'info');
 
             // 結果パネルを表示して情報タブに切り替え
@@ -1623,10 +1625,9 @@
 
             // ボタンを初期化
             const startBtn = document.getElementById('btn-start');
-            startBtn.disabled = false;
-            startBtn.classList.replace('bg-slate-300','bg-emerald-500');
-            startBtn.classList.add('hover:bg-emerald-600','text-white');
-            startBtn.classList.remove('text-slate-500','cursor-not-allowed');
+            startBtn.dataset.mode = 'start';
+            startBtn.className = 'flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-full text-sm transition';
+            startBtn.textContent = '▶︎ 開始';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = true;
             pauseBtn.className = 'flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed';
