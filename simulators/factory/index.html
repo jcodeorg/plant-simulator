@@ -343,39 +343,6 @@
                         </div>
                     </div>
 
-                    <!-- シミュレーション中ステータス（開始後に表示） -->
-                    <div id="ctrl-status-panel" class="hidden mb-2">
-                        <div class="flex gap-1 flex-wrap">
-                            <div class="flex-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 text-center min-w-0">
-                                <p class="text-[8px] text-blue-600 font-bold leading-tight">気温</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-temp">—</span>°C</p>
-                            </div>
-                            <div class="flex-1 bg-sky-50 px-2 py-1 rounded-lg border border-sky-100 text-center min-w-0">
-                                <p class="text-[8px] text-sky-600 font-bold leading-tight">湿度</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-humid">—</span>%</p>
-                            </div>
-                            <div class="flex-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100 text-center min-w-0">
-                                <p class="text-[8px] text-yellow-600 font-bold leading-tight">太陽光</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light">—</span><small>lx</small></p>
-                            </div>
-                            <div class="flex-1 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 text-center min-w-0">
-                                <p class="text-[8px] text-amber-600 font-bold leading-tight">出力光</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light-total">—</span><small>lx</small></p>
-                            </div>
-                            <div class="flex-1 bg-teal-50 px-2 py-1 rounded-lg border border-teal-100 text-center min-w-0">
-                                <p class="text-[8px] text-teal-600 font-bold leading-tight">水位</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-water">—</span><small>cm</small></p>
-                            </div>
-                            <div class="flex-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-center min-w-0">
-                                <p class="text-[8px] text-slate-500 font-bold leading-tight">経過日数</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-elapsed">—</span><small>日</small></p>
-                            </div>
-                            <div class="flex-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100 text-center min-w-0">
-                                <p class="text-[8px] text-yellow-700 font-bold leading-tight">電気代</p>
-                                <p class="text-xs font-bold text-yellow-800 whitespace-nowrap"><span id="ctrl-electric">—</span><small>円</small></p>
-                            </div>
-                        </div>
-                    </div>
                     <!-- LED 光量 + 手動操作 -->
                     <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
                         <span class="text-[10px] font-bold text-yellow-800 shrink-0">💡</span>
@@ -397,19 +364,19 @@
                             <option value="15000">15,000 lx</option>
                         </select>
                         <button id="btn-led-on" onclick="manualLED(true)"
-                                class="text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 transition shrink-0">
+                                class="text-sm font-bold px-3 py-1.5 rounded-full border-2 border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 transition shrink-0">
                             💡 ON
                         </button>
                         <button id="btn-led-off" onclick="manualLED(false)"
-                                class="text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100 transition shrink-0">
+                                class="text-sm font-bold px-3 py-1.5 rounded-full border-2 border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100 transition shrink-0">
                             ⚫ OFF
                         </button>
-                        <button class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-sky-400 bg-sky-50 text-sky-700 hover:bg-sky-100 transition shrink-0"
+                        <button class="hidden text-sm font-bold px-3 py-1.5 rounded-full border-2 border-sky-400 bg-sky-50 text-sky-700 hover:bg-sky-100 transition shrink-0"
                                 onclick="manualPump()">
                             💧 ポンプ
                         </button>
                         <button onclick="manualAddWater()"
-                                class="text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100 transition shrink-0">
+                                class="text-sm font-bold px-3 py-1.5 rounded-full border-2 border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100 transition shrink-0">
                             🚰 足し水
                         </button>
                     </div>
@@ -464,6 +431,40 @@
                                 <span id="light-warn" class="hidden text-xs font-bold text-amber-600">⚠️ 光量不足</span>
                                 <span class="text-base font-mono font-bold text-emerald-600">成長率 <span id="sens-growth-pct">0.0%</span></span>
                                 <span class="text-base font-mono font-bold text-rose-500">ダメージ <span id="info-damage-pct">0.0%</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- センサーステータス -->
+                    <div id="ctrl-status-panel" class="mb-2">
+                        <div class="flex gap-1 flex-wrap">
+                            <div class="flex-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 text-center min-w-0">
+                                <p class="text-[8px] text-blue-600 font-bold leading-tight">気温</p>
+                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-temp">—</span>°C</p>
+                            </div>
+                            <div class="flex-1 bg-sky-50 px-2 py-1 rounded-lg border border-sky-100 text-center min-w-0">
+                                <p class="text-[8px] text-sky-600 font-bold leading-tight">湿度</p>
+                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-humid">—</span>%</p>
+                            </div>
+                            <div class="flex-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100 text-center min-w-0">
+                                <p class="text-[8px] text-yellow-600 font-bold leading-tight">太陽光</p>
+                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light">—</span><small>lx</small></p>
+                            </div>
+                            <div class="flex-1 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 text-center min-w-0">
+                                <p class="text-[8px] text-amber-600 font-bold leading-tight">出力光</p>
+                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light-total">—</span><small>lx</small></p>
+                            </div>
+                            <div class="flex-1 bg-teal-50 px-2 py-1 rounded-lg border border-teal-100 text-center min-w-0">
+                                <p class="text-[8px] text-teal-600 font-bold leading-tight">水位</p>
+                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-water">—</span><small>cm</small></p>
+                            </div>
+                            <div class="flex-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-center min-w-0">
+                                <p class="text-[8px] text-slate-500 font-bold leading-tight">経過日数</p>
+                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-elapsed">—</span><small>日</small></p>
+                            </div>
+                            <div class="flex-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100 text-center min-w-0">
+                                <p class="text-[8px] text-yellow-700 font-bold leading-tight">電気代</p>
+                                <p class="text-xs font-bold text-yellow-800 whitespace-nowrap"><span id="ctrl-electric">—</span><small>円</small></p>
                             </div>
                         </div>
                     </div>
@@ -1435,7 +1436,7 @@
             const btnLedOn  = document.getElementById('btn-led-on');
             const btnLedOff = document.getElementById('btn-led-off');
             if (btnLedOn && btnLedOff) {
-                const base = 'text-[10px] font-bold px-2 py-0.5 rounded-full border-2 transition shrink-0';
+                const base = 'text-sm font-bold px-3 py-1.5 rounded-full border-2 transition shrink-0';
                 if (state.ledActive) {
                     btnLedOn.className  = `${base} border-yellow-500 bg-yellow-300 text-yellow-900 ring-2 ring-yellow-500 shadow-md`;
                     btnLedOff.className = `${base} border-slate-300 bg-slate-50 text-slate-400 hover:bg-slate-100`;
@@ -1456,16 +1457,13 @@
             if (elElec) elElec.textContent = simStats.ledCostAcc.toFixed(1);
 
             // --- 制御パネルステータス（ctrl-*）---
-            const ctrlPanel = document.getElementById('ctrl-status-panel');
-            if (ctrlPanel && ctrlPanel.style.display !== 'none') {
-                document.getElementById('ctrl-temp').textContent        = state.temp.toFixed(1);
-                document.getElementById('ctrl-humid').textContent       = state.humid.toFixed(1);
-                document.getElementById('ctrl-light').textContent       = Math.round(state.sunLux);
-                document.getElementById('ctrl-light-total').textContent = Math.round(state.light);
-                document.getElementById('ctrl-water').textContent       = state.waterLevel.toFixed(2);
-                document.getElementById('ctrl-elapsed').textContent     = (simStats.totalHours / 24).toFixed(1);
-                document.getElementById('ctrl-electric').textContent    = simStats.ledCostAcc.toFixed(1);
-            }
+            document.getElementById('ctrl-temp').textContent        = state.temp.toFixed(1);
+            document.getElementById('ctrl-humid').textContent       = state.humid.toFixed(1);
+            document.getElementById('ctrl-light').textContent       = Math.round(state.sunLux);
+            document.getElementById('ctrl-light-total').textContent = Math.round(state.light);
+            document.getElementById('ctrl-water').textContent       = state.waterLevel.toFixed(2);
+            document.getElementById('ctrl-elapsed').textContent     = (simStats.totalHours / 24).toFixed(1);
+            document.getElementById('ctrl-electric').textContent    = simStats.ledCostAcc.toFixed(1);
 
             // --- 空背景（昼夜サイクル）---
             const skyEl = document.getElementById('sky-bg');
@@ -1525,7 +1523,6 @@
             startBtn.className = 'shrink-0 bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition';
             startBtn.textContent = '⏹ 停止';
             document.getElementById('initial-settings').style.display = 'none';
-            document.getElementById('ctrl-status-panel').style.display = 'grid';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = false;
             pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-full text-base transition';
@@ -1675,7 +1672,6 @@
                 sb.className    = 'shrink-0 bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition';
                 sb.textContent  = '⏹ 停止';
                 document.getElementById('initial-settings').style.display = 'none';
-                document.getElementById('ctrl-status-panel').style.display = 'grid';
             }
 
             resetResult();
@@ -1957,7 +1953,6 @@
             startBtn.className = 'shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition';
             startBtn.textContent = '▶︎ 開始';
             document.getElementById('initial-settings').style.display = '';
-            document.getElementById('ctrl-status-panel').style.display = 'none';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = true;
             pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-slate-300 text-slate-500 font-bold rounded-full text-base transition cursor-not-allowed';
