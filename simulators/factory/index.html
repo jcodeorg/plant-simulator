@@ -477,20 +477,16 @@
                         </div>
                     </div>
 
-                    <!-- 植物ステータス: ダメージ -->
-                    <div class="mb-2 text-sm">
+                    <!-- 植物ステータス: ダメージ + 内訳 -->
+                    <div class="mb-2">
                         <div class="bg-rose-50 p-2 rounded-lg border border-rose-100">
-                            <p class="text-[10px] text-rose-600 font-bold uppercase">Damage (ダメージ)</p>
-                            <div class="w-full bg-rose-200 rounded-full h-2 mt-2">
-                                <div id="damage-bar" class="bg-rose-500 h-2 rounded-full transition-all" style="width: 0%"></div>
-                            </div>
+                            <div id="stress-breakdown"></div>
                         </div>
                     </div>
 
                     <!-- サブタブバー -->
                     <div class="flex gap-1.5 mb-2 border-b border-slate-200 pb-1.5">
                         <button id="info-tab-chart"  onclick="switchInfoTab('chart')"  class="sub-tab-btn active">📈 チャート</button>
-                        <button id="info-tab-damage" onclick="switchInfoTab('damage')" class="sub-tab-btn inactive">📊 ダメージ内訳</button>
                         <button id="info-tab-result" onclick="switchInfoTab('result')" class="sub-tab-btn inactive">📋 分析結果</button>
                     </div>
 
@@ -498,13 +494,6 @@
                     <div id="info-panel-chart">
                         <div class="bg-white rounded-lg border border-slate-200 p-2">
                             <canvas id="main-chart" height="320"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- サブパネル: ダメージ原因内訳 -->
-                    <div id="info-panel-damage" style="display:none">
-                        <div class="bg-white border border-slate-200 rounded-lg p-2">
-                            <div id="stress-breakdown"></div>
                         </div>
                     </div>
 
@@ -992,7 +981,7 @@
         }
 
         function switchInfoTab(sub) {
-            ['chart', 'damage', 'result'].forEach(s => {
+            ['chart', 'result'].forEach(s => {
                 document.getElementById('info-panel-' + s).style.display = s === sub ? '' : 'none';
                 document.getElementById('info-tab-' + s).className = 'sub-tab-btn ' + (s === sub ? 'active' : 'inactive');
             });
@@ -1400,33 +1389,11 @@
             document.getElementById('sensor-light').innerText = Math.round(state.sunLux);  // センサ値（太陽光のみ）
             document.getElementById('sensor-light-total').innerText = Math.round(state.light); // 出力値（太陽光+LED）
             document.getElementById('sensor-humid').innerText = state.humid.toFixed(1);
-            document.getElementById('damage-bar').style.width = `${(state.damage * 100).toFixed(1)}%`;
-            document.getElementById('sensor-water').innerText = state.waterLevel.toFixed(2);
+            document.getElementById('damage-bar') && (document.getElementById('damage-bar').style.width = `${(state.damage * 100).toFixed(1)}%`);
+            const dmgLbl = document.getElementById('damage-pct-label');
+            if (dmgLbl) dmgLbl.textContent = `${(state.damage * 100).toFixed(1)}%`;
 
-            // --- エネルギー蓄積バー ---
-            const storageBar = document.getElementById('storage-bar');
-            const storageVal = document.getElementById('storage-val');
-            const storageStatus = document.getElementById('storage-status');
-            if (storageBar && storageVal && storageStatus) {
-                const sDLI = lettuce.state.storageDLI;
-                storageBar.style.width = `${(sDLI * 100).toFixed(0)}%`;
-                storageVal.textContent = `${(sDLI * 100).toFixed(0)}%`;
-                if (sDLI > 0.5) {
-                    storageBar.className = 'bg-orange-500 h-2 rounded-full transition-all';
-                    storageStatus.textContent = '⚠️ 飽和';
-                    storageStatus.className = 'text-[10px] font-bold shrink-0 text-orange-600';
-                } else if (sDLI > 0.1) {
-                    storageBar.className = 'bg-lime-500 h-2 rounded-full transition-all';
-                    storageStatus.textContent = '✅ 適準';
-                    storageStatus.className = 'text-[10px] font-bold shrink-0 text-lime-600';
-                } else {
-                    storageBar.className = 'bg-slate-300 h-2 rounded-full transition-all';
-                    storageStatus.textContent = '🌙 不足';
-                    storageStatus.className = 'text-[10px] font-bold shrink-0 text-slate-400';
-                }
-            }
-
-            // --- ダメージ原因内訳 ---
+            // --- ダメージ原因内訳（4要因のみ）---
             const sb = state.stressBreakdown;
             const sbEl = document.getElementById('stress-breakdown');
             if (sbEl && sb) {
@@ -1443,36 +1410,12 @@
                         `<p class="text-[9px] font-mono ${valCls}">${hourStr}<span class="text-slate-300 font-normal"> (${pCum(cumV)}%)</span></p>` +
                     `</div>`;
                 };
-                const sDLI    = lettuce.state.storageDLI;
-                const sDLIPct = Math.min(100, sDLI * 100).toFixed(0);
-                const sDLICls = sDLI > 0.5 ? 'bg-orange-400' : sDLI > 0.1 ? 'bg-lime-500' : 'bg-slate-300';
-                const sDLILabel = sDLI > 0.5 ? '⚠️飽和' : sDLI > 0.1 ? '✅蓄積' : '🌙消費';
-                const sDLIValCls = sDLI > 0.5 ? 'text-orange-600 font-bold' : 'text-lime-700';
-                const netPos  = (sb.net || 0) > 1e-6;
-                const recHour = pHour(sb.recovery || 0);
-                const recCum  = pCum(stressCumul.recovery);
                 sbEl.innerHTML =
-                    `<div class="grid grid-cols-4 gap-1 mb-1.5">` +
+                    `<div class="grid grid-cols-4 gap-1">` +
                         mkCard('🌡️', '高温湿度',   sb.env,     stressCumul.env,     'bg-orange-400', '気温>26°C、湿度適正外でダメージ') +
                         mkCard('💧', '水過不足',   sb.water,   stressCumul.water,   'bg-blue-400',   '水位低下で蓄積、水切れは致命的') +
                         mkCard('🌿', '徒長',       sb.etiol,   stressCumul.etiol,   'bg-yellow-500', '光量不足で茎が徒長し品質低下') +
                         mkCard('🍂', 'チップバーン', sb.tipburn, stressCumul.tipburn, 'bg-red-400',    '高光・高温時にCa不足で発生') +
-                    `</div>` +
-                    `<div class="grid grid-cols-2 gap-1 mb-1.5">` +
-                        `<div title="デンプン蓄積量。0.5超で光合成阻害リスク">` +
-                            `<p class="text-[8px] text-slate-500 leading-tight mb-0.5">⚡ エネルギー</p>` +
-                            `<div class="w-full bg-slate-100 rounded-full h-1 mb-0.5"><div class="h-1 rounded-full ${sDLICls} transition-all" style="width:${sDLIPct}%"></div></div>` +
-                            `<p class="text-[9px] font-mono ${sDLIValCls}">${sDLIPct}% <span class="font-normal text-slate-400">${sDLILabel}</span></p>` +
-                        `</div>` +
-                        `<div>` +
-                            `<p class="text-[8px] text-emerald-600 leading-tight mb-0.5">💚 自然回復</p>` +
-                            `<div class="w-full bg-slate-100 rounded-full h-1 mb-0.5"><div class="h-1 rounded-full bg-emerald-400 transition-all" style="width:${barPct(stressCumul.recovery)}%"></div></div>` +
-                            `<p class="text-[9px] font-mono text-emerald-600">−${recHour}/h <span class="text-slate-400 font-normal">(${recCum}%)</span></p>` +
-                        `</div>` +
-                    `</div>` +
-                    `<div class="flex items-center justify-between pt-1 border-t border-slate-200 font-bold text-[10px] ${netPos ? 'text-rose-600' : 'text-emerald-600'}">` +
-                        `<span>${netPos ? '⚠️ 悪化中' : '✅ 回復中'}</span>` +
-                        `<span class="font-mono">${netPos ? '+' : ''}${pHour(sb.net || 0)}%/時　現在 ${(state.damage * 100).toFixed(1)}%</span>` +
                     `</div>`;
             }
 
