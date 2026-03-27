@@ -250,15 +250,28 @@
                     <div class="flex items-center justify-between mb-2">
                         <h3 class="font-bold text-slate-700 text-sm">⏱ シミュレーション制御</h3>
                     </div>
-                    <div class="flex gap-2 mb-2">
+                    <div class="flex gap-2 mb-2 items-center">
                         <button id="btn-start" onclick="startOrReset()" data-mode="start"
                                 class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-full text-sm transition">
                             ▶︎ 開始
                         </button>
-                        <button id="btn-pause" onclick="togglePause()" disabled
-                                class="flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed">
-                            ⏸ 一時停止
-                        </button>
+                        <div class="flex flex-col items-center shrink-0">
+                            <button onclick="stepSpeed(-1)"
+                                    class="w-9 h-9 flex items-center justify-center bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-full text-sm transition" title="遅く">&lt;&lt;</button>
+                            <span id="speed-prev-label" class="text-[10px] font-bold text-slate-400 mt-0.5">x3</span>
+                        </div>
+                        <div class="flex flex-col items-center shrink-0">
+                            <button id="btn-pause" onclick="togglePause()" disabled
+                                    class="w-9 h-9 flex items-center justify-center bg-slate-300 text-slate-500 font-bold rounded-full text-base transition cursor-not-allowed">
+                                ⏸
+                            </button>
+                            <span id="speed-label" class="text-[10px] font-bold text-slate-500 mt-0.5">x6</span>
+                        </div>
+                        <div class="flex flex-col items-center shrink-0">
+                            <button onclick="stepSpeed(1)"
+                                    class="w-9 h-9 flex items-center justify-center bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-full text-sm transition" title="速く">&gt;&gt;</button>
+                            <span id="speed-next-label" class="text-[10px] font-bold text-slate-400 mt-0.5">x12</span>
+                        </div>
                     </div>
 
                     <!-- タイムラインスクラバー (開始後に表示) -->
@@ -279,14 +292,7 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-3 mb-2">
-                        <span class="text-xs text-slate-400 shrink-0">1h/s</span>
-                        <input type="range" id="speed-slider" min="1" max="24" step="1" value="6"
-                               class="flex-1 accent-emerald-500" oninput="updateSpeed(this.value)">
-                        <span class="text-xs text-slate-400 shrink-0">1日/s</span>
-                    </div>
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs text-slate-500" id="speed-label">1秒 = 6時間</span>
+                    <div class="flex items-center justify-end mb-2">
                         <div class="flex items-center gap-2">
                             <span class="text-xs text-slate-500">月:</span>
                             <select id="month-select" onchange="changeMonth(this.value)"
@@ -630,7 +636,8 @@
         let weatherData  = [];  // generateMonthData() の結果 (45日×24時間)
         let weatherIndex = 0;   // 現在の時間インデックス
         let simAccum     = 0;   // 蓄積経過（シミュレーション時間・時間単位）
-        let simSpeed     = 6;    // 速度: 単位は時間/実秒 (1〜24)
+        let simSpeed     = 6;    // 速度: 単位は時間/実秒 (1,3,6,12,24)
+        const SIM_SPEEDS = [1, 3, 6, 12, 24];
         let simPaused    = true; // true=停止中 / false=実行中
 
         let state = {
@@ -1579,8 +1586,8 @@
             startBtn.textContent = '🔄 リセット';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = false;
-            pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
-            pauseBtn.textContent = '⏸ 一時停止';
+            pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-full text-base transition';
+            pauseBtn.textContent = '⏸';
             addLog('シミュレーション開始。', 'success');
         }
 
@@ -1590,15 +1597,15 @@
             const pauseBtn = document.getElementById('btn-pause');
             if (simPaused) {
                 setStatusBadge(false);
-                pauseBtn.textContent = '▶ 再開';
-                pauseBtn.className = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
+                pauseBtn.textContent = '▶';
+                pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-full text-base transition';
                 const ci = Math.min(weatherIndex, weatherData.length - 1);
                 const cw = weatherData[ci];
                 showResult('paused', cw.day);
             } else {
                 setStatusBadge(true);
-                pauseBtn.textContent = '⏸ 一時停止';
-                pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
+                pauseBtn.textContent = '⏸';
+                pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-full text-base transition';
                 resetResult();
                 switchInfoTab('chart');
                 addLog('再開。', 'info');
@@ -1609,21 +1616,29 @@
             simPaused = false;
             setStatusBadge(true);
             const pauseBtn = document.getElementById('btn-pause');
-            pauseBtn.textContent = '⏸ 一時停止';
-            pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
+            pauseBtn.textContent = '⏸';
+            pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-full text-base transition';
             resetResult();
             switchInfoTab('chart');
             addLog('シミュレーションを再開しました。', 'info');
         }
 
+        function stepSpeed(dir) {
+            const idx = SIM_SPEEDS.indexOf(simSpeed);
+            const next = Math.max(0, Math.min(SIM_SPEEDS.length - 1, idx + dir));
+            simSpeed = SIM_SPEEDS[next];
+            updateSpeedLabels();
+        }
+        function updateSpeedLabels() {
+            const idx = SIM_SPEEDS.indexOf(simSpeed);
+            document.getElementById('speed-label').textContent      = `x${simSpeed}`;
+            document.getElementById('speed-prev-label').textContent = idx > 0                       ? `x${SIM_SPEEDS[idx - 1]}` : '';
+            document.getElementById('speed-next-label').textContent = idx < SIM_SPEEDS.length - 1  ? `x${SIM_SPEEDS[idx + 1]}` : '';
+        }
+
         function updateSpeed(val) {
             simSpeed = parseFloat(val);
-            const label = document.getElementById('speed-label');
-            if (simSpeed < 24) {
-                label.textContent = simSpeed === 1 ? '1秒 = 1時間' : `1秒 = ${simSpeed}時間`;
-            } else {
-                label.textContent = '1秒 = 1日 (最高速)';
-            }
+            updateSpeedLabels();
         }
 
         // --- タイムライン巻き戻し ---
@@ -1638,8 +1653,8 @@
                 setStatusBadge(false);
                 const pb = document.getElementById('btn-pause');
                 if (pb && !pb.disabled) {
-                    pb.textContent = '▶ 再開';
-                    pb.className = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
+                    pb.textContent = '▶';
+                    pb.className = 'w-9 h-9 flex items-center justify-center bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-full text-base transition';
                     pb.onclick = togglePause;
                 }
             }
@@ -1669,12 +1684,12 @@
             const pb = document.getElementById('btn-pause');
             if (pb && !pb.disabled) {
                 if (isLive) {
-                    pb.textContent = '▶ 再開';
-                    pb.className   = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
+                    pb.textContent = '▶';
+                    pb.className   = 'w-9 h-9 flex items-center justify-center bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-full text-base transition';
                     pb.onclick     = togglePause;
                 } else {
-                    pb.textContent = '🏠 最新に戻る';
-                    pb.className   = 'flex-1 bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 rounded-full text-sm transition';
+                    pb.textContent = '🏠';
+                    pb.className   = 'w-9 h-9 flex items-center justify-center bg-slate-500 hover:bg-slate-600 text-white font-bold rounded-full text-base transition';
                     pb.onclick     = returnToLive;
                 }
             }
@@ -1710,8 +1725,8 @@
             const pb = document.getElementById('btn-pause');
             if (pb) {
                 pb.disabled    = false;
-                pb.textContent = '⏸ 一時停止';
-                pb.className   = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
+                pb.textContent = '⏸';
+                pb.className   = 'w-9 h-9 flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-full text-base transition';
                 pb.onclick     = togglePause;
             }
             const sb = document.getElementById('btn-start');
@@ -1746,8 +1761,8 @@
             // btn-pause を「▶ 再開」に戻す
             const pb = document.getElementById('btn-pause');
             if (pb && !pb.disabled) {
-                pb.textContent = '▶ 再開';
-                pb.className   = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
+                pb.textContent = '▶';
+                pb.className   = 'w-9 h-9 flex items-center justify-center bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-full text-base transition';
                 pb.onclick     = togglePause;
             }
 
@@ -1798,8 +1813,8 @@
                 const pauseBtn = document.getElementById('btn-pause');
                 if (pauseBtn) {
                     pauseBtn.disabled = true;
-                    pauseBtn.className = 'flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed';
-                    pauseBtn.textContent = '⏸ 一時停止';
+                    pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-slate-300 text-slate-500 font-bold rounded-full text-base transition cursor-not-allowed';
+                    pauseBtn.textContent = '⏸';
                 }
             }
 
@@ -2007,8 +2022,8 @@
             startBtn.textContent = '▶︎ 開始';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = true;
-            pauseBtn.className = 'flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed';
-            pauseBtn.textContent = '⏸ 一時停止';
+            pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-slate-300 text-slate-500 font-bold rounded-full text-base transition cursor-not-allowed';
+            pauseBtn.textContent = '⏸';
 
             simPaused = true;
             setStatusBadge(false);
