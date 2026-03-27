@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Farm Simulator - Compact Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; overflow-x: hidden; background-color: #f0f4f8; }
@@ -435,23 +436,8 @@
 
                     <!-- サブパネル: チャート -->
                     <div id="info-panel-chart">
-                        <div class="flex flex-col gap-2">
-                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
-                                <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌡️ 気温 (°C)</p>
-                                <div class="chart-wrap"><svg id="chart-temp" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
-                            </div>
-                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
-                                <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">💧 湿度 (%)</p>
-                                <div class="chart-wrap"><svg id="chart-humid" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
-                            </div>
-                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
-                                <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">☀️ 光量 (lx)</p>
-                                <div class="chart-wrap"><svg id="chart-light" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
-                            </div>
-                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
-                                <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌱 成長率 / ダメージ</p>
-                                <div class="chart-wrap"><svg id="chart-growth" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
-                            </div>
+                        <div class="bg-white rounded-lg border border-slate-200 p-2">
+                            <canvas id="main-chart" height="320"></canvas>
                         </div>
                     </div>
 
@@ -962,60 +948,176 @@
 
         function pushChart(key, val) {
             chartData[key].push(val);
-            // 上限を超えたら先頭を捨てる（念のため）
             if (chartData[key].length > CHART_MAX) chartData[key].shift();
         }
 
         function clearCharts() {
             Object.keys(chartData).forEach(k => chartData[k] = []);
+            if (mainChart) {
+                mainChart.data.labels = [];
+                mainChart.data.datasets.forEach(ds => ds.data = []);
+                mainChart.update('none');
+            }
         }
 
-        function drawChart(svgId, values, color, min, max, values2, color2) {
-            const svg = document.getElementById(svgId);
-            if (!svg || values.length < 2) return;
-            const W = 300, H = 80, PAD = 4;
-            const n = values.length;
-            const range = max - min || 1;
-            const pts = (arr) => arr.map((v, i) => {
-                const x = PAD + (i / (CHART_MAX - 1)) * (W - PAD * 2);
-                const y = H - PAD - ((v - min) / range) * (H - PAD * 2);
-                return `${x.toFixed(1)},${y.toFixed(1)}`;
-            }).join(' ');
+        // --- Chart.js 統合チャート ---
+        let mainChart = null;
 
-            // 全期間ラベル（右端=現在、左端=開始）
-            const last = values[n - 1];
-            const dispVal = max > 1000 ? Math.round(last) : last.toFixed(1);
-            // 経過ステップを時間表示（Day換算）
-            const dayLabel = n >= 24 ? `Day${Math.ceil(n/24)}` : `${n}h`;
+        function initMainChart() {
+            const ctx = document.getElementById('main-chart');
+            if (!ctx) return;
+            if (mainChart) { mainChart.destroy(); mainChart = null; }
 
-            let extra = '';
-            if (values2 && values2.length >= 2) {
-                extra = `<polyline points="${pts(values2)}" fill="none" stroke="${color2}" stroke-width="0.8" opacity="0.7"/>`;
-            }
-            svg.innerHTML = `
-                <rect width="300" height="80" rx="4" fill="#f8fafc"/>
-                <polyline points="${pts(values)}" fill="none" stroke="${color}" stroke-width="1"/>
-                ${extra}
-                <text x="${PAD}" y="12" text-anchor="start" font-size="9" fill="#94a3b8">${dayLabel}</text>
-                <text x="${W - PAD}" y="12" text-anchor="end" font-size="11" fill="${color}">${dispVal}</text>
-            `;
+            Chart.defaults.font.family = "'Inter','Helvetica Neue',sans-serif";
+            Chart.defaults.font.size   = 10;
+
+            mainChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: '気温 (°C)',
+                            data: [],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59,130,246,0.08)',
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            borderWidth: 1.5,
+                            yAxisID: 'yTemp',
+                        },
+                        {
+                            label: '湿度 (%)',
+                            data: [],
+                            borderColor: '#06b6d4',
+                            backgroundColor: 'rgba(6,182,212,0.08)',
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            borderWidth: 1.5,
+                            yAxisID: 'yPct',
+                        },
+                        {
+                            label: '光量 (klx)',
+                            data: [],
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245,158,11,0.08)',
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            borderWidth: 1.5,
+                            yAxisID: 'yLight',
+                        },
+                        {
+                            label: '成長率 (%)',
+                            data: [],
+                            borderColor: '#22c55e',
+                            backgroundColor: 'rgba(34,197,94,0.10)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                            yAxisID: 'yPct',
+                        },
+                        {
+                            label: 'ダメージ (%)',
+                            data: [],
+                            borderColor: '#f43f5e',
+                            backgroundColor: 'rgba(244,63,94,0.08)',
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            borderWidth: 1.5,
+                            borderDash: [4, 3],
+                            yAxisID: 'yPct',
+                        },
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { boxWidth: 12, padding: 8, font: { size: 10 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const v = ctx.parsed.y;
+                                    const u = ['°C','%','klx','%','%'][ctx.datasetIndex];
+                                    return ` ${ctx.dataset.label}: ${v.toFixed(1)}${u}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxTicksLimit: 10,
+                                color: '#94a3b8',
+                                font: { size: 9 },
+                                callback: (_, i) => {
+                                    const d = Math.floor(i / 24) + 1;
+                                    return i % 24 === 0 ? `Day${d}` : '';
+                                }
+                            },
+                            grid: { color: 'rgba(148,163,184,0.15)' }
+                        },
+                        yTemp: {
+                            type: 'linear',
+                            position: 'left',
+                            min: 0, max: 40,
+                            title: { display: true, text: '°C', color: '#3b82f6', font: { size: 9 } },
+                            ticks: { color: '#3b82f6', font: { size: 9 }, stepSize: 10 },
+                            grid: { color: 'rgba(148,163,184,0.12)' }
+                        },
+                        yPct: {
+                            type: 'linear',
+                            position: 'right',
+                            min: 0, max: 100,
+                            title: { display: true, text: '%', color: '#64748b', font: { size: 9 } },
+                            ticks: { color: '#64748b', font: { size: 9 }, stepSize: 25 },
+                            grid: { drawOnChartArea: false }
+                        },
+                        yLight: {
+                            type: 'linear',
+                            display: false,
+                            min: 0,
+                        }
+                    }
+                }
+            });
+        }
+
+        function drawCharts() {
+            if (!mainChart) { initMainChart(); if (!mainChart) return; }
+            const n = chartData.temp.length;
+            if (n === 0) return;
+
+            // x ラベルはインデックス（ticks.callbackで Day変換）
+            mainChart.data.labels = Array.from({ length: n }, (_, i) => i);
+            mainChart.data.datasets[0].data = chartData.temp;
+            mainChart.data.datasets[1].data = chartData.humid;
+            mainChart.data.datasets[2].data = chartData.light.map(v => v / 1000);  // lx → klx
+            mainChart.data.datasets[3].data = chartData.growth;
+            mainChart.data.datasets[4].data = chartData.damage;
+            // 光量軸の max を動的に更新
+            mainChart.options.scales.yLight.max = (sunSettings.peakLux + 15000) / 1000;
+            mainChart.update('none');
         }
 
         // 1シミュレーション時間ごとにデータを追記（whileループ内で呼ぶ）
         function pushChartData() {
             pushChart('temp',   state.temp);
             pushChart('humid',  state.humid);
-            pushChart('light',  state.light);   // 総合光量(太陽光+LED)
+            pushChart('light',  state.light);
             pushChart('growth', state.growth);
             pushChart('damage', state.damage * 100);
-        }
-
-        // 毎フレーム描画のみ行う（pushChartDataとは分離）
-        function drawCharts() {
-            drawChart('chart-temp',   chartData.temp,   '#3b82f6',  0,  35);
-            drawChart('chart-humid',  chartData.humid,  '#0ea5e9',  30, 100);
-            drawChart('chart-light',  chartData.light,  '#f59e0b',  0, sunSettings.peakLux + 15000);
-            drawChart('chart-growth', chartData.growth, '#22c55e',  0, 100, chartData.damage, '#f43f5e');
         }
 
         // --- メインループ ---
@@ -1686,6 +1788,7 @@
             document.getElementById('peak-input').value    = sunSettings.peakLux;
 
             initWeather(4);
+            initMainChart();
             addLog("Smart Farm OS initialized.");
             addLog("PlantSimulator (サニーレタス) 読み込み完了。", "success");
             addLog("WeatherGenerator (東京・4月 45日分) 読み込み完了。", "success");
