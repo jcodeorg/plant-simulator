@@ -293,50 +293,85 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-end mb-2">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-slate-500">月:</span>
-                            <select id="month-select" onchange="changeMonth(this.value)"
-                                    class="text-xs border border-slate-200 rounded px-2 py-1 bg-white">
-                                <optgroup label="屋外">
-                                    <option value="outdoor_1">冬 1月 (屋外)</option>
-                                    <option value="outdoor_4" selected>春 4月 (屋外)</option>
-                                    <option value="outdoor_7">夏 7月 (屋外)</option>
-                                    <option value="outdoor_10">秋 10月 (屋外)</option>
-                                </optgroup>
-                                <optgroup label="屋内">
-                                    <option value="indoor_1">冬 1月 (屋内)</option>
-                                    <option value="indoor_4">春 4月 (屋内)</option>
-                                    <option value="indoor_7">夏 7月 (屋内)</option>
-                                    <option value="indoor_10">秋 10月 (屋内)</option>
-                                </optgroup>
-                            </select>
+                    <!-- 初期設定（開始前のみ表示） -->
+                    <div id="initial-settings">
+                        <div class="flex items-center justify-end mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500">月:</span>
+                                <select id="month-select" onchange="changeMonth(this.value)"
+                                        class="text-xs border border-slate-200 rounded px-2 py-1 bg-white">
+                                    <optgroup label="屋外">
+                                        <option value="outdoor_1">冬 1月 (屋外)</option>
+                                        <option value="outdoor_4" selected>春 4月 (屋外)</option>
+                                        <option value="outdoor_7">夏 7月 (屋外)</option>
+                                        <option value="outdoor_10">秋 10月 (屋外)</option>
+                                    </optgroup>
+                                    <optgroup label="屋内">
+                                        <option value="indoor_1">冬 1月 (屋内)</option>
+                                        <option value="indoor_4">春 4月 (屋内)</option>
+                                        <option value="indoor_7">夏 7月 (屋内)</option>
+                                        <option value="indoor_10">秋 10月 (屋内)</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-xs mb-2">
+                            <div class="flex flex-col">
+                                <label class="text-slate-500">日の出 (h)</label>
+                                <input id="sunrise-input" type="number" min="0" max="23" value="6" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-slate-500">日の入り (h)</label>
+                                <input id="sunset-input" type="number" min="0" max="23" value="18" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-slate-500">ピーク照度 (lx)</label>
+                                <input id="peak-input" type="number" min="0" step="1000" value="50000" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-slate-500">最低気温 (°C)</label>
+                                <input id="mintemp-input" type="number" min="-10" max="40" step="0.5" value="10.5" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-slate-500">最高気温 (°C)</label>
+                                <input id="maxtemp-input" type="number" min="-10" max="50" step="0.5" value="19.5" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-slate-500">平均湿度 (%)</label>
+                                <input id="hum-input" type="number" min="0" max="100" value="60" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                            </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 text-xs mb-2">
-                        <div class="flex flex-col">
-                            <label class="text-slate-500">日の出 (h)</label>
-                            <input id="sunrise-input" type="number" min="0" max="23" value="6" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+
+                    <!-- シミュレーション中ステータス（開始後に表示） -->
+                    <div id="ctrl-status-panel" class="hidden mb-2 grid grid-cols-3 gap-1.5 text-xs">
+                        <div class="bg-blue-50 p-1.5 rounded-lg border border-blue-100">
+                            <p class="text-[9px] text-blue-600 font-bold leading-tight">気温</p>
+                            <p class="font-bold text-slate-700"><span id="ctrl-temp">—</span>°C</p>
                         </div>
-                        <div class="flex flex-col">
-                            <label class="text-slate-500">日の入り (h)</label>
-                            <input id="sunset-input" type="number" min="0" max="23" value="18" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                        <div class="bg-sky-50 p-1.5 rounded-lg border border-sky-100">
+                            <p class="text-[9px] text-sky-600 font-bold leading-tight">湿度</p>
+                            <p class="font-bold text-slate-700"><span id="ctrl-humid">—</span>%</p>
                         </div>
-                        <div class="flex flex-col">
-                            <label class="text-slate-500">ピーク照度 (lx)</label>
-                            <input id="peak-input" type="number" min="0" step="1000" value="50000" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                        <div class="bg-yellow-50 p-1.5 rounded-lg border border-yellow-100">
+                            <p class="text-[9px] text-yellow-600 font-bold leading-tight">太陽光</p>
+                            <p class="font-bold text-slate-700"><span id="ctrl-light">—</span> <small>lx</small></p>
                         </div>
-                        <div class="flex flex-col">
-                            <label class="text-slate-500">最低気温 (°C)</label>
-                            <input id="mintemp-input" type="number" min="-10" max="40" step="0.5" value="10.5" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                        <div class="bg-amber-50 p-1.5 rounded-lg border border-amber-100">
+                            <p class="text-[9px] text-amber-600 font-bold leading-tight">出力光</p>
+                            <p class="font-bold text-slate-700"><span id="ctrl-light-total">—</span> <small>lx</small></p>
                         </div>
-                        <div class="flex flex-col">
-                            <label class="text-slate-500">最高気温 (°C)</label>
-                            <input id="maxtemp-input" type="number" min="-10" max="50" step="0.5" value="19.5" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                        <div class="bg-teal-50 p-1.5 rounded-lg border border-teal-100">
+                            <p class="text-[9px] text-teal-600 font-bold leading-tight">水位</p>
+                            <p class="font-bold text-slate-700"><span id="ctrl-water">—</span> cm</p>
                         </div>
-                        <div class="flex flex-col">
-                            <label class="text-slate-500">平均湿度 (%)</label>
-                            <input id="hum-input" type="number" min="0" max="100" value="60" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                        <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                            <p class="text-[9px] text-slate-500 font-bold leading-tight">経過日数</p>
+                            <p class="font-bold text-slate-700"><span id="ctrl-elapsed">—</span>日</p>
+                        </div>
+                        <div class="bg-yellow-50 p-1.5 rounded-lg border border-yellow-100 col-span-3">
+                            <p class="text-[9px] text-yellow-700 font-bold leading-tight">電気代（累積）</p>
+                            <p class="font-bold text-yellow-800"><span id="ctrl-electric">—</span>円</p>
                         </div>
                     </div>
                     <!-- LED 輝度設定 -->
@@ -400,29 +435,8 @@
                 <!-- 情報タブ -->
                 <div id="panel-info" class="overflow-y-auto" style="max-height:calc(100vh - 5.5rem)">
 
-                    <!-- 環境センサー 4列×2行 -->
-                    <div class="grid grid-cols-4 gap-2 mb-2">
-                        <div class="bg-blue-50 p-1.5 rounded-lg border border-blue-100">
-                            <p class="text-[9px] text-blue-600 font-bold uppercase leading-tight">気温</p>
-                            <p class="text-sm font-bold text-slate-700"><span id="sensor-temp">24.0</span>°C</p>
-                        </div>
-                        <div class="bg-sky-50 p-1.5 rounded-lg border border-sky-100">
-                            <p class="text-[9px] text-sky-600 font-bold uppercase leading-tight">湿度</p>
-                            <p class="text-sm font-bold text-slate-700"><span id="sensor-humid">55.0</span>%</p>
-                        </div>
-                        <div class="bg-yellow-50 p-1.5 rounded-lg border border-yellow-100">
-                            <p class="text-[9px] text-yellow-600 font-bold uppercase leading-tight">太陽光</p>
-                            <p class="text-sm font-bold text-slate-700"><span id="sensor-light">1200</span> <small>lx</small></p>
-                            <p class="text-[9px] text-slate-400">出力: <span id="sensor-light-total">1200</span></p>
-                        </div>
-                        <div class="bg-teal-50 p-1.5 rounded-lg border border-teal-100">
-                            <p class="text-[9px] text-teal-600 font-bold leading-tight">水位（基準5cm）</p>
-                            <p class="text-sm font-bold text-slate-700"><span id="sensor-water">0.00</span> cm</p>
-                        </div>
-                        <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                            <p class="text-[9px] text-slate-500 font-bold uppercase leading-tight">経過日数</p>
-                            <p class="text-sm font-bold text-slate-700"><span id="sensor-elapsed-days">0.0</span>日</p>
-                        </div>
+                    <!-- 環境センサー（成長率・ダメージのみ） -->
+                    <div class="grid grid-cols-2 gap-2 mb-2">
                         <div class="bg-purple-50 p-1.5 rounded-lg border border-purple-100">
                             <p class="text-[9px] text-purple-600 font-bold uppercase leading-tight">成長率</p>
                             <p class="text-sm font-bold text-purple-700"><span id="sensor-growth-rate">0.0</span>%</p>
@@ -431,13 +445,16 @@
                             <p class="text-[9px] text-rose-600 font-bold uppercase leading-tight">ダメージ</p>
                             <p class="text-sm font-bold text-rose-600"><span id="sensor-damage-pct">0.0</span>%</p>
                         </div>
-                        <div class="bg-yellow-50 p-1.5 rounded-lg border border-yellow-100">
-                            <p class="text-[9px] text-yellow-700 font-bold uppercase leading-tight">電気代（累積）</p>
-                            <p class="text-sm font-bold text-yellow-800"><span id="sensor-electric">0.0</span>円</p>
-                        </div>
                     </div>
-                    <!-- EC値（非表示・render用） -->
+                    <!-- render用 hidden センサー値 -->
                     <span id="sensor-ec" class="hidden">1.2</span>
+                    <span id="sensor-temp" class="hidden"></span>
+                    <span id="sensor-humid" class="hidden"></span>
+                    <span id="sensor-light" class="hidden"></span>
+                    <span id="sensor-light-total" class="hidden"></span>
+                    <span id="sensor-water" class="hidden"></span>
+                    <span id="sensor-elapsed-days" class="hidden"></span>
+                    <span id="sensor-electric" class="hidden"></span>
 
                     <!-- ステージタイムライン (フル幅) -->
                     <div class="mb-2 bg-slate-50 rounded-lg px-2 pt-1.5 pb-1.5 border border-slate-200">
@@ -1528,6 +1545,18 @@
             const elElec = document.getElementById('sensor-electric');
             if (elElec) elElec.textContent = simStats.ledCostAcc.toFixed(1);
 
+            // --- 制御パネルステータス（ctrl-*）---
+            const ctrlPanel = document.getElementById('ctrl-status-panel');
+            if (ctrlPanel && ctrlPanel.style.display !== 'none') {
+                document.getElementById('ctrl-temp').textContent        = state.temp.toFixed(1);
+                document.getElementById('ctrl-humid').textContent       = state.humid.toFixed(1);
+                document.getElementById('ctrl-light').textContent       = Math.round(state.sunLux);
+                document.getElementById('ctrl-light-total').textContent = Math.round(state.light);
+                document.getElementById('ctrl-water').textContent       = state.waterLevel.toFixed(2);
+                document.getElementById('ctrl-elapsed').textContent     = (simStats.totalHours / 24).toFixed(1);
+                document.getElementById('ctrl-electric').textContent    = simStats.ledCostAcc.toFixed(1);
+            }
+
             // --- 空背景（昼夜サイクル）---
             const skyEl = document.getElementById('sky-bg');
             if (skyEl) skyEl.style.background = getSkyGradient(Math.floor(simStats.totalHours) % 24);
@@ -1584,7 +1613,9 @@
             const startBtn = document.getElementById('btn-start');
             startBtn.dataset.mode = 'reset';
             startBtn.className = 'flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 rounded-full text-sm transition';
-            startBtn.textContent = '🔄 リセット';
+            startBtn.textContent = '⏹ 停止';
+            document.getElementById('initial-settings').style.display = 'none';
+            document.getElementById('ctrl-status-panel').style.display = 'grid';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = false;
             pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-full text-base transition';
@@ -1734,7 +1765,9 @@
             if (sb) {
                 sb.dataset.mode = 'reset';
                 sb.className    = 'flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 rounded-full text-sm transition';
-                sb.textContent  = '🔄 リセット';
+                sb.textContent  = '⏹ 停止';
+                document.getElementById('initial-settings').style.display = 'none';
+                document.getElementById('ctrl-status-panel').style.display = 'grid';
             }
 
             resetResult();
@@ -2021,6 +2054,8 @@
             startBtn.dataset.mode = 'start';
             startBtn.className = 'flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-full text-sm transition';
             startBtn.textContent = '▶︎ 開始';
+            document.getElementById('initial-settings').style.display = '';
+            document.getElementById('ctrl-status-panel').style.display = 'none';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = true;
             pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-slate-300 text-slate-500 font-bold rounded-full text-base transition cursor-not-allowed';
