@@ -228,8 +228,6 @@
                         <span class="mr-2">🏪</span> 植物ショーケース
                     </h2>
                     <div class="flex items-center gap-2">
-                        <span id="sim-clock" class="text-sm font-mono font-bold bg-slate-100 px-3 py-1 rounded text-slate-700">Day 1 - 00:00</span>
-                        <span id="status-badge" class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">稼働中</span>
                     </div>
                 </div>
                 
@@ -251,14 +249,13 @@
                         <h3 class="font-bold text-slate-700 text-sm">⏱ シミュレーション制御</h3>
                     </div>
 
-                    <!-- タイムラインスクラバー (開始後に表示) -->
-                    <div id="timeline-section" class="hidden mb-2 pb-2 border-b border-slate-100">
+                    <!-- タイムラインスクラバー -->
+                    <div id="timeline-section" class="mb-2 pb-2 border-b border-slate-100">
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-[11px] font-bold text-slate-500">⏪ タイムライン</span>
-                            <span class="text-[10px] text-slate-400 font-mono" id="timeline-pos-label">—</span>
                         </div>
                         <input type="range" id="timeline-slider" min="0" max="0" step="1" value="0"
-                               class="w-full" oninput="scrubSim(parseInt(this.value))">
+                               class="w-full accent-slate-400" oninput="scrubSim(parseInt(this.value))">
                         <div id="timeline-branch-bar" class="hidden mt-1.5 px-2 py-1.5 bg-purple-50 border border-purple-200 rounded-lg branch-pulse">
                             <div class="flex items-center justify-between gap-2 flex-wrap">
                                 <span class="text-[11px] text-purple-700 font-bold">🔀 この時点から条件を変えて再開できます</span>
@@ -274,15 +271,8 @@
                                 class="shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition">
                             ▶︎ 開始
                         </button>
-                        <div class="flex gap-1.5 flex-1 min-w-0">
-                            <div class="flex-1 bg-purple-50 px-2 py-1 rounded-lg border border-purple-100 text-center min-w-0">
-                                <p class="text-[8px] text-purple-600 font-bold leading-tight">成長率</p>
-                                <p class="text-xs font-bold text-purple-700"><span id="sensor-growth-rate">0.0</span>%</p>
-                            </div>
-                            <div class="flex-1 bg-rose-50 px-2 py-1 rounded-lg border border-rose-100 text-center min-w-0">
-                                <p class="text-[8px] text-rose-600 font-bold leading-tight">ダメージ</p>
-                                <p class="text-xs font-bold text-rose-600"><span id="sensor-damage-pct">0.0</span>%</p>
-                            </div>
+                        <div class="flex-1 min-w-0 text-center">
+                            <span id="ctrl-clock" class="text-2xl font-mono font-bold text-slate-800 tracking-wide">Day 1 - 00:00</span>
                         </div>
                         <div class="flex flex-col items-center shrink-0">
                             <button onclick="stepSpeed(-1)"
@@ -699,17 +689,7 @@
         // --- ロギング ---
         function addLog(msg, type = 'info') { /* ログパネル廃止 */ }
 
-        function setStatusBadge(running) {
-            const b = document.getElementById('status-badge');
-            if (!b) return;
-            if (running) {
-                b.textContent = '稼働中';
-                b.className = 'px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded';
-            } else {
-                b.textContent = '停止中';
-                b.className = 'px-2 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded';
-            }
-        }
+        function setStatusBadge(running) {}
 
         // --- ドラッグ＆ドロップ ---
         let draggedElement = null;
@@ -1296,8 +1276,8 @@
                 // シミュレーション時計を更新
                 const ci = Math.min(weatherIndex, weatherData.length - 1);
                 const cw = weatherData[ci];
-                document.getElementById('sim-clock').textContent =
-                    `Day ${cw.day} - ${String(cw.hour).padStart(2, '0')}:00`;
+                const clockStr1 = `Day ${cw.day} - ${String(cw.hour).padStart(2, '0')}:00`;
+                document.getElementById('ctrl-clock').textContent = clockStr1;
             }
 
             // 現在の天候ステップの環境値をセンサー表示に毎フレーム反映（停止中・ステップ間も含む）
@@ -1633,9 +1613,7 @@
             if (wi < weatherData.length) {
                 const w = weatherData[wi];
                 const timeStr = `Day ${w.day} - ${String(w.hour).padStart(2,'0')}:00`;
-                document.getElementById('sim-clock').textContent = timeStr;
-                const lbl = document.getElementById('timeline-pos-label');
-                if (lbl) lbl.textContent = timeStr;
+                document.getElementById('ctrl-clock').textContent = timeStr;
             }
 
             // ライブ先端以外では分岐バーを表示 & btn-pause を「最新に戻る」に切り替え
@@ -1733,8 +1711,8 @@
             const wi = Math.min(weatherIndex, weatherData.length - 1);
             if (weatherData.length > 0 && wi >= 0) {
                 const w = weatherData[wi];
-                document.getElementById('sim-clock').textContent =
-                    `Day ${w.day} - ${String(w.hour).padStart(2,'0')}:00`;
+                const clockStr2 = `Day ${w.day} - ${String(w.hour).padStart(2,'0')}:00`;
+                document.getElementById('ctrl-clock').textContent = clockStr2;
             }
         }
 
@@ -1743,18 +1721,12 @@
             const slider  = document.getElementById('timeline-slider');
             if (!section || !slider) return;
             const hasData = snapshots.length > 0;
-            section.classList.toggle('hidden', !hasData);
             if (!hasData) return;
             slider.max = snapshots.length - 1;
             if (scrubIndex < 0) {
                 // ライブモード: スライダーを最後尾に追従
                 slider.value = snapshots.length - 1;
                 const wi  = Math.min(weatherIndex, weatherData.length - 1);
-                const lbl = document.getElementById('timeline-pos-label');
-                if (lbl && weatherData.length > 0 && wi >= 0) {
-                    const w = weatherData[wi];
-                    lbl.textContent = `Day ${w.day} - ${String(w.hour).padStart(2,'0')}:00`;
-                }
             }
         }
 
@@ -2018,9 +1990,7 @@
             scrubIndex   = -1;
             const tlBar = document.getElementById('timeline-branch-bar');
             if (tlBar) tlBar.classList.add('hidden');
-            const tlSection = document.getElementById('timeline-section');
-            if (tlSection) tlSection.classList.add('hidden');
-            document.getElementById('sim-clock').textContent = 'Day 1 - 00:00';
+            document.getElementById('ctrl-clock').textContent = 'Day 1 - 00:00';
             clearCharts();
             addLog("System parameters reset.");
         }
