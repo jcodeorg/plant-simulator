@@ -206,6 +206,14 @@
                       gap: 1px; padding: 5px 0; border-radius: 8px; border: 2px solid;
                       font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s; width: 100%; }
 
+        /* タイムラインスクラバー */
+        #timeline-slider { accent-color: #a855f7; cursor: pointer; }
+        #timeline-slider::-webkit-slider-thumb { cursor: pointer; }
+        .branch-pulse { animation: branchPulse 2s ease-in-out infinite; }
+        @keyframes branchPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(168,85,247,0.4); }
+            50%       { box-shadow: 0 0 0 5px rgba(168,85,247,0); }
+        }
 
     </style>
 </head>
@@ -256,6 +264,30 @@
                             📥 CSV
                         </button>
                     </div>
+
+                    <!-- タイムラインスクラバー (開始後に表示) -->
+                    <div id="timeline-section" class="hidden mt-1 pt-2 border-t border-slate-100">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[11px] font-bold text-slate-500">⏪ タイムライン</span>
+                            <span class="text-[10px] text-slate-400 font-mono" id="timeline-pos-label">—</span>
+                        </div>
+                        <input type="range" id="timeline-slider" min="0" max="0" step="1" value="0"
+                               class="w-full" oninput="scrubSim(parseInt(this.value))">
+                        <div id="timeline-branch-bar" class="hidden mt-1.5 px-2 py-1.5 bg-purple-50 border border-purple-200 rounded-lg branch-pulse">
+                            <div class="flex items-center justify-between gap-2 flex-wrap">
+                                <span class="text-[11px] text-purple-700 font-bold">🔀 この時点から条件を変えて再開できます</span>
+                                <div class="flex gap-1.5">
+                                    <button onclick="returnToLive()" class="text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-2 py-1 rounded-full transition">
+                                        ▶ 最新に戻る
+                                    </button>
+                                    <button onclick="resumeFromSnapshot()" class="text-[11px] bg-purple-500 hover:bg-purple-600 text-white font-bold px-2 py-1 rounded-full transition">
+                                        ↩ この時点から再開
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex items-center gap-3 mb-2">
                         <span class="text-xs text-slate-400 shrink-0">1h/s</span>
                         <input type="range" id="speed-slider" min="1" max="24" step="1" value="6"
@@ -636,6 +668,10 @@
 
         // ストレス要因の累積値 (各要因 /h を毎時間加算)
         let stressCumul = { env: 0, water: 0, etiol: 0, tipburn: 0, recovery: 0 };
+
+        // タイムラインスナップショット
+        let snapshots  = [];  // 時間ごとの完全スナップショット
+        let scrubIndex = -1;  // -1=ライブ, >=0=スクラブ中のインデックス
 
         // LED電気代: 8000lx = 2.4円/h を基準に光量比例
 
@@ -1112,16 +1148,17 @@
 
         function drawCharts() {
             if (!mainChart) { initMainChart(); if (!mainChart) return; }
-            const n = chartData.temp.length;
+            // scrubIndex >= 0 の場合はその時点までのデータのみ表示
+            const n = scrubIndex >= 0 ? scrubIndex + 1 : chartData.temp.length;
             if (n === 0) return;
 
             // x ラベルはインデックス（ticks.callbackで Day変換）
             mainChart.data.labels = Array.from({ length: n }, (_, i) => i);
-            mainChart.data.datasets[0].data = chartData.temp;
-            mainChart.data.datasets[1].data = chartData.humid;
-            mainChart.data.datasets[2].data = chartData.light.map(v => v / 1000);  // lx → klx
-            mainChart.data.datasets[3].data = chartData.growth;
-            mainChart.data.datasets[4].data = chartData.damage;
+            mainChart.data.datasets[0].data = chartData.temp.slice(0, n);
+            mainChart.data.datasets[1].data = chartData.humid.slice(0, n);
+            mainChart.data.datasets[2].data = chartData.light.slice(0, n).map(v => v / 1000);  // lx → klx
+            mainChart.data.datasets[3].data = chartData.growth.slice(0, n);
+            mainChart.data.datasets[4].data = chartData.damage.slice(0, n);
             // 光量軸の max を動的に更新
             mainChart.options.scales.yLight.max = (sunSettings.peakLux + 15000) / 1000;
             mainChart.update('none');
@@ -1134,6 +1171,35 @@
             pushChart('light',  state.light);
             pushChart('growth', state.growth);
             pushChart('damage', state.damage * 100);
+        }
+
+        // スナップショットを保存（タイムライン巻き戻し用）
+        function saveSnapshot() {
+            snapshots.push({
+                lettuceState: {
+                    growth:           lettuce.state.growth,
+                    damage:           lettuce.state.damage,
+                    waterLevel:       lettuce.state.waterLevel,
+                    tipburn:          lettuce.state.tipburn,
+                    storageDLI:       lettuce.state.storageDLI,
+                    isDayLightDeficit:lettuce.state.isDayLightDeficit,
+                },
+                stressCumul: { ...stressCumul },
+                simStats:    { ...simStats },
+                uiState: {
+                    ec:               state.ec,
+                    growth:           state.growth,
+                    damage:           state.damage,
+                    waterLevel:       state.waterLevel,
+                    ledActive:        state.ledActive,
+                    ledLux:           state.ledLux,
+                    etiolation:       state.etiolation,
+                    stageName:        state.stageName,
+                    stressBreakdown:  { ...state.stressBreakdown },
+                },
+                weatherIndex: weatherIndex,
+                csvLogLength: csvLog.length,
+            });
         }
 
         // --- メインループ ---
@@ -1223,6 +1289,7 @@
                     weatherIndex++;
                     // 1シミュレーション時間ごとに1点だけ記録（速度に依存しない）
                     pushChartData();
+                    saveSnapshot();
                 }
 
                 // シミュレーション時計を更新
@@ -1495,6 +1562,9 @@
                 imgs[0].src = fade.back;   imgs[0].style.opacity = '1';
                 imgs[1].src = fade.front;  imgs[1].style.opacity = fade.frontOpacity;
             }
+
+            // タイムラインスライダーを毎フレーム更新
+            updateTimelineSlider();
         }
 
         // --- 速度・天候制御 ---
@@ -1563,6 +1633,138 @@
                 label.textContent = simSpeed === 1 ? '1秒 = 1時間' : `1秒 = ${simSpeed}時間`;
             } else {
                 label.textContent = '1秒 = 1日 (最高速)';
+            }
+        }
+
+        // --- タイムライン巻き戻し ---
+        function scrubSim(idx) {
+            if (snapshots.length === 0 || idx < 0 || idx >= snapshots.length) return;
+            scrubIndex = idx;
+            const snap = snapshots[idx];
+
+            // スクラブ時は必ず一時停止
+            if (!simPaused) {
+                simPaused = true;
+                setStatusBadge(false);
+                const pb = document.getElementById('btn-pause');
+                if (pb && !pb.disabled) {
+                    pb.textContent = '▶ 再開';
+                    pb.className = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
+                }
+            }
+
+            // 状態を復元（render が正確な値を表示できるよう）
+            Object.assign(state, snap.uiState);
+            state.stressBreakdown = { ...snap.uiState.stressBreakdown };
+            Object.assign(stressCumul, snap.stressCumul);
+            Object.assign(simStats, snap.simStats);
+            Object.assign(lettuce.state, snap.lettuceState);
+
+            // 時計・ラベル更新
+            const wi = snap.weatherIndex;
+            if (wi < weatherData.length) {
+                const w = weatherData[wi];
+                const timeStr = `Day ${w.day} - ${String(w.hour).padStart(2,'0')}:00`;
+                document.getElementById('sim-clock').textContent = timeStr;
+                const lbl = document.getElementById('timeline-pos-label');
+                if (lbl) lbl.textContent = timeStr;
+            }
+
+            // ライブ先端以外では分岐バーを表示
+            const isLive = (idx === snapshots.length - 1);
+            const bar = document.getElementById('timeline-branch-bar');
+            if (bar) bar.classList.toggle('hidden', isLive);
+        }
+
+        function resumeFromSnapshot() {
+            if (scrubIndex < 0 || scrubIndex >= snapshots.length) return;
+            const idx  = scrubIndex;
+            const snap = snapshots[idx];
+
+            // このスナップショット以降のデータをすべて切り捨て
+            snapshots.splice(idx + 1);
+            chartData.temp.splice(idx + 1);
+            chartData.humid.splice(idx + 1);
+            chartData.light.splice(idx + 1);
+            chartData.growth.splice(idx + 1);
+            chartData.damage.splice(idx + 1);
+            csvLog.splice(snap.csvLogLength);
+
+            // weatherIndex・scrubIndex を復元
+            weatherIndex = snap.weatherIndex;
+            simAccum     = 0;
+            scrubIndex   = -1;
+
+            const bar = document.getElementById('timeline-branch-bar');
+            if (bar) bar.classList.add('hidden');
+
+            // 終了フラグをクリア、再開
+            state.simFinished = false;
+            simPaused = false;
+            setStatusBadge(true);
+
+            const pb = document.getElementById('btn-pause');
+            if (pb) {
+                pb.disabled  = false;
+                pb.textContent = '⏸ 一時停止';
+                pb.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
+            }
+            const sb = document.getElementById('btn-start');
+            if (sb) {
+                sb.dataset.mode = 'reset';
+                sb.className    = 'flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 rounded-full text-sm transition';
+                sb.textContent  = '🔄 リセット';
+            }
+
+            document.getElementById('result-panel').classList.add('hidden');
+            document.getElementById('result-panel-placeholder').style.display = '';
+            switchInfoTab('chart');
+        }
+
+        function returnToLive() {
+            if (snapshots.length === 0) return;
+            const liveIdx = snapshots.length - 1;
+            const snap    = snapshots[liveIdx];
+
+            // ライブ状態を復元
+            Object.assign(state, snap.uiState);
+            state.stressBreakdown = { ...snap.uiState.stressBreakdown };
+            Object.assign(stressCumul, snap.stressCumul);
+            Object.assign(simStats, snap.simStats);
+            Object.assign(lettuce.state, snap.lettuceState);
+            weatherIndex = snap.weatherIndex;
+            scrubIndex   = -1;
+
+            const slider = document.getElementById('timeline-slider');
+            if (slider) slider.value = liveIdx;
+            const bar = document.getElementById('timeline-branch-bar');
+            if (bar) bar.classList.add('hidden');
+
+            const wi = Math.min(weatherIndex, weatherData.length - 1);
+            if (weatherData.length > 0 && wi >= 0) {
+                const w = weatherData[wi];
+                document.getElementById('sim-clock').textContent =
+                    `Day ${w.day} - ${String(w.hour).padStart(2,'0')}:00`;
+            }
+        }
+
+        function updateTimelineSlider() {
+            const section = document.getElementById('timeline-section');
+            const slider  = document.getElementById('timeline-slider');
+            if (!section || !slider) return;
+            const hasData = snapshots.length > 0;
+            section.classList.toggle('hidden', !hasData);
+            if (!hasData) return;
+            slider.max = snapshots.length - 1;
+            if (scrubIndex < 0) {
+                // ライブモード: スライダーを最後尾に追従
+                slider.value = snapshots.length - 1;
+                const wi  = Math.min(weatherIndex, weatherData.length - 1);
+                const lbl = document.getElementById('timeline-pos-label');
+                if (lbl && weatherData.length > 0 && wi >= 0) {
+                    const w = weatherData[wi];
+                    lbl.textContent = `Day ${w.day} - ${String(w.hour).padStart(2,'0')}:00`;
+                }
             }
         }
 
@@ -1814,6 +2016,12 @@
             weatherIndex = 0;
             simAccum     = 0;
             state.sunLux = 0;
+            snapshots    = [];
+            scrubIndex   = -1;
+            const tlBar = document.getElementById('timeline-branch-bar');
+            if (tlBar) tlBar.classList.add('hidden');
+            const tlSection = document.getElementById('timeline-section');
+            if (tlSection) tlSection.classList.add('hidden');
             document.getElementById('sim-clock').textContent = 'Day 1 - 00:00';
             clearCharts();
             addLog("System parameters reset.");
