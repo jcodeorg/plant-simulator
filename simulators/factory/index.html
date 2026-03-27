@@ -159,7 +159,7 @@
             box-shadow: 0 5px 25px rgba(253, 224, 71, 1);
         }
 
-        .log-panel { font-family: monospace; font-size: 11px; height: 56px; overflow-y: auto; }
+        .log-panel { display: none; }
         .slot-highlight { background-color: rgba(255, 255, 255, 0.5) !important; border: 1px solid white !important; }
         /* グラフ */
         .chart-wrap { position: relative; width: 100%; }
@@ -346,9 +346,6 @@
                 </div>
             </div>
 
-            <div class="bg-slate-900 text-green-400 p-4 rounded-xl shadow-inner border border-slate-700">
-                <div id="log" class="log-panel"></div>
-            </div>
         </div>
 
         <!-- 右側：制御ロジック -->
@@ -657,12 +654,7 @@
         let sunSettings = { ...MONTH_DEFAULTS['outdoor_4'] };
 
         // --- ロギング ---
-        function addLog(msg, type = 'info') {
-            const time = new Date().toLocaleTimeString('ja-JP', { hour12: false });
-            const colors = { error: 'text-rose-400', success: 'text-emerald-400', info: 'text-sky-400' };
-            const logEl = document.getElementById('log');
-            logEl.innerHTML = `<div><span class="text-slate-500">[${time}]</span> <span class="${colors[type]}">${msg}</span></div>` + logEl.innerHTML;
-        }
+        function addLog(msg, type = 'info') { /* ログパネル廃止 */ }
 
         function setStatusBadge(running) {
             const b = document.getElementById('status-badge');
