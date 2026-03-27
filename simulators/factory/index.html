@@ -504,8 +504,7 @@
                     <!-- サブパネル: ダメージ原因内訳 -->
                     <div id="info-panel-damage" style="display:none">
                         <div class="bg-white border border-slate-200 rounded-lg p-2">
-                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">📊 ダメージ原因内訳 <span class="normal-case font-normal text-slate-400">(現在/時あたり)</span></p>
-                            <div id="stress-breakdown" class="space-y-1.5"></div>
+                            <div id="stress-breakdown"></div>
                         </div>
                     </div>
 
@@ -1431,62 +1430,48 @@
             const sb = state.stressBreakdown;
             const sbEl = document.getElementById('stress-breakdown');
             if (sbEl && sb) {
-                const pHour = v => (v * 100).toFixed(2);         // /h → %/時
-                const pCum  = v => (v * 100).toFixed(1);         // 累積/h合計 → %
-                const barPctCum = cumV => Math.min(100, Math.max(0, cumV) * 100).toFixed(0);
-                const mkBar = (cumV, cls) =>
-                    `<div class="flex-1 bg-slate-100 rounded-full h-1.5"><div class="h-1.5 rounded-full ${cls} transition-all" style="width:${barPctCum(cumV)}%"></div></div>`;
-                const mkRow = (icon, label, v, cumV, cls, tip) => {
+                const pHour  = v => (v * 100).toFixed(2);
+                const pCum   = v => (v * 100).toFixed(1);
+                const barPct = cumV => Math.min(100, Math.max(0, cumV) * 100).toFixed(0);
+                const mkCard = (icon, label, v, cumV, cls, tip) => {
                     const on = v > 1e-6 || cumV > 1e-4;
-                    const hourStr = v > 1e-6 ? `+${pHour(v)}/時` : '—';
-                    const cumStr  = cumV > 1e-4 ? `(累${pCum(cumV)}%)` : '';
-                    return `<div class="flex items-center gap-1.5 ${on ? '' : 'opacity-30'}" title="${tip}">` +
-                        `<span class="text-base w-5 text-center shrink-0">${icon}</span>` +
-                        `<span class="text-[10px] w-[60px] text-slate-600 shrink-0">${label}</span>` +
-                        mkBar(cumV, cls) +
-                        `<span class="text-[10px] font-mono w-[52px] text-right shrink-0 ${v > 1e-6 ? 'text-rose-600 font-semibold' : 'text-slate-300'}">${hourStr}</span>` +
-                        `<span class="text-[10px] font-mono w-[58px] text-right shrink-0 ${cumV > 1e-4 ? 'text-slate-900 font-bold' : 'text-slate-200'}">${cumStr}</span>` +
+                    const hourStr = v > 1e-6 ? `+${pHour(v)}/h` : '—';
+                    const valCls  = v > 1e-6 ? 'text-rose-600 font-bold' : 'text-slate-300';
+                    return `<div class="${on ? '' : 'opacity-40'}" title="${tip}">` +
+                        `<p class="text-[8px] text-slate-500 leading-tight mb-0.5">${icon} ${label}</p>` +
+                        `<div class="w-full bg-slate-100 rounded-full h-1 mb-0.5"><div class="h-1 rounded-full ${cls} transition-all" style="width:${barPct(cumV)}%"></div></div>` +
+                        `<p class="text-[9px] font-mono ${valCls}">${hourStr}<span class="text-slate-300 font-normal"> (${pCum(cumV)}%)</span></p>` +
                     `</div>`;
                 };
-                const netPos = (sb.net || 0) > 1e-6;
-                const recHour = pHour(sb.recovery || 0.001);
-                const recCum = pCum(stressCumul.recovery);
+                const sDLI    = lettuce.state.storageDLI;
+                const sDLIPct = Math.min(100, sDLI * 100).toFixed(0);
+                const sDLICls = sDLI > 0.5 ? 'bg-orange-400' : sDLI > 0.1 ? 'bg-lime-500' : 'bg-slate-300';
+                const sDLILabel = sDLI > 0.5 ? '⚠️飽和' : sDLI > 0.1 ? '✅蓄積' : '🌙消費';
+                const sDLIValCls = sDLI > 0.5 ? 'text-orange-600 font-bold' : 'text-lime-700';
+                const netPos  = (sb.net || 0) > 1e-6;
+                const recHour = pHour(sb.recovery || 0);
+                const recCum  = pCum(stressCumul.recovery);
                 sbEl.innerHTML =
-                    `<div class="flex text-[9px] text-slate-400 mb-1 gap-1.5">` +
-                        `<span class="w-5 shrink-0"></span>` +
-                        `<span class="w-[60px] shrink-0"></span>` +
-                        `<div class="flex-1"></div>` +
-                        `<span class="w-[52px] text-right shrink-0">現在/時</span>` +
-                        `<span class="w-[58px] text-right shrink-0">累積</span>` +
+                    `<div class="grid grid-cols-4 gap-1 mb-1.5">` +
+                        mkCard('🌡️', '高温湿度',   sb.env,     stressCumul.env,     'bg-orange-400', '気温>26°C、湿度適正外でダメージ') +
+                        mkCard('💧', '水過不足',   sb.water,   stressCumul.water,   'bg-blue-400',   '水位低下で蓄積、水切れは致命的') +
+                        mkCard('🌿', '徒長',       sb.etiol,   stressCumul.etiol,   'bg-yellow-500', '光量不足で茎が徒長し品質低下') +
+                        mkCard('🍂', 'チップバーン', sb.tipburn, stressCumul.tipburn, 'bg-red-400',    '高光・高温時にCa不足で発生') +
                     `</div>` +
-                    mkRow('🌡️', '高温・湿度', sb.env,     stressCumul.env,     'bg-orange-400', '気温 > 26°C、または湿度が適正外れるとダメージが発生') +
-                    mkRow('💧', '水過不足',   sb.water,   stressCumul.water,   'bg-blue-400',   '水位が下がりすぎると蓄積し、水切れは致命的') +
-                    mkRow('🌿', '徒長',       sb.etiol,   stressCumul.etiol,   'bg-yellow-500', '光量不足で茎が徒長すると品質が低下') +
-                    mkRow('🍂', 'チップバーン', sb.tipburn, stressCumul.tipburn, 'bg-red-400',    '高光・高温時にカルシウム不足で発生') +
-                    (() => {
-                        const sDLI = lettuce.state.storageDLI;
-                        const pct  = (sDLI * 100).toFixed(0);
-                        const saturated = sDLI > 0.5;
-                        const barCls = saturated ? 'bg-orange-400' : sDLI > 0.1 ? 'bg-lime-500' : 'bg-slate-300';
-                        const statusLabel = saturated ? '⚠️ 飽和' : sDLI > 0.1 ? '✅ 蓄積中' : '🌙 消費中';
-                        const valColor = saturated ? 'text-orange-600 font-semibold' : 'text-lime-700';
-                        return `<div class="flex items-center gap-1.5" title="デンプン蓄積量。0.5超で光合成阻害＋チップバーン増加のリスク">` +
-                            `<span class="text-base w-5 text-center shrink-0">⚡</span>` +
-                            `<span class="text-[10px] w-[60px] text-slate-600 shrink-0">エネルギー</span>` +
-                            `<div class="flex-1 bg-slate-100 rounded-full h-1.5"><div class="h-1.5 rounded-full ${barCls} transition-all" style="width:${pct}%"></div></div>` +
-                            `<span class="text-[10px] font-mono w-[52px] text-right shrink-0 ${valColor}">${pct}%</span>` +
-                            `<span class="text-[10px] font-mono w-[58px] text-right shrink-0 text-slate-400">${statusLabel}</span>` +
-                        `</div>`;
-                    })() +
-                    `<div class="flex items-center gap-1.5 mt-1 pt-1 border-t border-slate-100">` +
-                        `<span class="text-base w-5 text-center shrink-0">💚</span>` +
-                        `<span class="text-[10px] w-[60px] text-emerald-600 shrink-0">自然回復</span>` +
-                        `<div class="flex-1"></div>` +
-                        `<span class="text-[10px] font-mono w-[52px] text-right shrink-0 text-emerald-600 font-semibold">−${recHour}/時</span>` +
-                        `<span class="text-[10px] font-mono w-[58px] text-right shrink-0 text-emerald-500">(累${recCum}%)</span>` +
+                    `<div class="grid grid-cols-2 gap-1 mb-1.5">` +
+                        `<div title="デンプン蓄積量。0.5超で光合成阻害リスク">` +
+                            `<p class="text-[8px] text-slate-500 leading-tight mb-0.5">⚡ エネルギー</p>` +
+                            `<div class="w-full bg-slate-100 rounded-full h-1 mb-0.5"><div class="h-1 rounded-full ${sDLICls} transition-all" style="width:${sDLIPct}%"></div></div>` +
+                            `<p class="text-[9px] font-mono ${sDLIValCls}">${sDLIPct}% <span class="font-normal text-slate-400">${sDLILabel}</span></p>` +
+                        `</div>` +
+                        `<div>` +
+                            `<p class="text-[8px] text-emerald-600 leading-tight mb-0.5">💚 自然回復</p>` +
+                            `<div class="w-full bg-slate-100 rounded-full h-1 mb-0.5"><div class="h-1 rounded-full bg-emerald-400 transition-all" style="width:${barPct(stressCumul.recovery)}%"></div></div>` +
+                            `<p class="text-[9px] font-mono text-emerald-600">−${recHour}/h <span class="text-slate-400 font-normal">(${recCum}%)</span></p>` +
+                        `</div>` +
                     `</div>` +
-                    `<div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-200 font-bold text-[11px] ${netPos ? 'text-rose-600' : 'text-emerald-600'}">` +
-                        `<span>${netPos ? '⚠️ ダメージ悪化中' : '✅ 回復中 / 安定'}</span>` +
+                    `<div class="flex items-center justify-between pt-1 border-t border-slate-200 font-bold text-[10px] ${netPos ? 'text-rose-600' : 'text-emerald-600'}">` +
+                        `<span>${netPos ? '⚠️ 悪化中' : '✅ 回復中'}</span>` +
                         `<span class="font-mono">${netPos ? '+' : ''}${pHour(sb.net || 0)}%/時　現在 ${(state.damage * 100).toFixed(1)}%</span>` +
                     `</div>`;
             }
