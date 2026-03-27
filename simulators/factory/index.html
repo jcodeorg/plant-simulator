@@ -90,49 +90,83 @@
         
         /* 植物ショーケース */
         .showcase {
-            background: #1e293b;
-            border: 8px solid #475569;
-            border-radius: 12px;
-            height: 190px;
+            border: 3px solid rgba(180,210,240,0.65);
+            border-radius: 10px;
+            height: 155px;
             position: relative;
-            padding: 10px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(2, 1fr);
-            gap: 10px;
             overflow: hidden;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25), 0 6px 20px rgba(0,0,0,0.4);
         }
-        .shelf {
-            background: rgba(255,255,255,0.05);
-            border-bottom: 4px solid #334155;
-            position: relative;
+        /* ガラス反射ハイライト */
+        .showcase::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg,
+                rgba(255,255,255,0.20) 0%, transparent 38%,
+                transparent 62%, rgba(255,255,255,0.07) 100%);
+            z-index: 30; pointer-events: none;
+        }
+        /* 空背景 */
+        #sky-bg {
+            position: absolute; inset: 0; z-index: 0;
+        }
+        /* LED ライン (上部全幅) */
+        .led-strip {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 7px;
+            background: #374151;
+            z-index: 20;
+            border-radius: 0;
+            transition: background 0.4s, box-shadow 0.4s;
+        }
+        .led-active {
+            background: #fef9c3;
+            box-shadow: 0 3px 22px 6px rgba(253,224,71,0.90),
+                        0 3px 50px 20px rgba(253,200,50,0.40);
+        }
+        /* LED 下向きグロー */
+        #led-glow {
+            position: absolute;
+            top: 7px; left: 0; right: 0;
+            height: 55%;
+            background: linear-gradient(to bottom, rgba(253,224,71,0.18), transparent);
+            z-index: 6; pointer-events: none;
+            transition: opacity 0.5s;
+            opacity: 0;
+        }
+        /* 植物列 */
+        .plants-row {
+            position: absolute;
+            top: 7px; bottom: 0; left: 0; right: 0;
             display: flex;
             align-items: flex-end;
-            justify-content: center;
-            padding-bottom: 5px;
-        }
-        .water-layer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(56, 189, 248, 0.3);
-            transition: height 0.5s, background-color 0.5s;
-            z-index: 1;
+            z-index: 10;
+            overflow: hidden;
         }
         .plant-unit {
-            z-index: 2;
+            flex: 1;
             display: grid;
             align-items: end;
             justify-items: center;
-            filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
-            transition: filter 0.3s;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
         }
         .plant-unit img {
             grid-area: 1 / 1;
-            height: 60px;
-            width: auto;
+            width: 100%;
+            height: auto;
+            max-height: 130px;
             object-fit: contain;
+            display: block;
+        }
+        /* 水位フロントオーバーレイ */
+        #water-front {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(56,189,248,0.28);
+            border-top: 1px solid rgba(56,189,248,0.55);
+            transition: height 0.8s ease;
+            z-index: 25; pointer-events: none;
         }
 
         /* ステージタイムライン */
@@ -145,20 +179,7 @@
                         width: 14px; height: 14px; border-radius: 50%;
                         background: white; border: 3px solid #0f172a;
                         box-shadow: 0 2px 8px rgba(0,0,0,0.45); transition: left 0.5s ease; z-index: 10; }
-        .led-strip {
-            position: absolute;
-            top: 2px;
-            left: 10%;
-            right: 10%;
-            height: 4px;
-            background: #475569;
-            border-radius: 2px;
-            transition: all 0.3s;
-        }
-        .led-active {
-            background: #fde047;
-            box-shadow: 0 5px 25px rgba(253, 224, 71, 1);
-        }
+        .led-strip.inactive:hover { background: #e2e8f0; }
 
         .log-panel { display: none; }
         .slot-highlight { background-color: rgba(255, 255, 255, 0.5) !important; border: 1px solid white !important; }
@@ -185,12 +206,7 @@
                       gap: 1px; padding: 5px 0; border-radius: 8px; border: 2px solid;
                       font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s; width: 100%; }
 
-        /* 光量オーバーレイ */
-        #light-overlay {
-            position: absolute; inset: 0; z-index: 0;
-            pointer-events: none;
-            transition: background 0.8s;
-        }
+
     </style>
 </head>
 <body class="p-2 bg-slate-100">
@@ -210,15 +226,15 @@
                 </div>
                 
                 <div class="showcase" id="main-showcase">
-                    <div id="light-overlay"></div>
-                    <div id="led-top" class="led-strip" style="top: 5px;"></div>
-                    <div class="shelf"><div class="water-layer" id="water-1"></div><div class="plant-unit" id="p1"></div></div>
-                    <div class="shelf"><div class="water-layer" id="water-2"></div><div class="plant-unit" id="p2"></div></div>
-                    <div class="shelf"><div class="water-layer" id="water-3"></div><div class="plant-unit" id="p3"></div></div>
-                    <div id="led-mid" class="led-strip" style="top: 50%;"></div>
-                    <div class="shelf"><div class="water-layer" id="water-4"></div><div class="plant-unit" id="p4"></div></div>
-                    <div class="shelf"><div class="water-layer" id="water-5"></div><div class="plant-unit" id="p5"></div></div>
-                    <div class="shelf"><div class="water-layer" id="water-6"></div><div class="plant-unit" id="p6"></div></div>
+                    <div id="sky-bg"></div>
+                    <div id="led-top" class="led-strip"></div>
+                    <div id="led-glow"></div>
+                    <div class="plants-row">
+                        <div class="plant-unit" id="p1"></div>
+                        <div class="plant-unit" id="p2"></div>
+                        <div class="plant-unit" id="p3"></div>
+                    </div>
+                    <div id="water-front"></div>
                 </div>
 
                 <!-- シミュレーション制御 -->
@@ -1237,6 +1253,38 @@
 
         /**
          * 成長度から back/front 画像と front の不透明度を計算する（クロスフェード用）
+        /**
+         * 時刻（0-23時）から空の背景グラデーションを返す
+         * 暗闇→夜明け→朝→昼→夕→夜 の遷移をRGB補間で表現
+         */
+        function getSkyGradient(hour) {
+            // キーフレーム: [hour, [top R,G,B], [bottom R,G,B]]
+            const kf = [
+                [ 0, [2,8,35],        [5,18,60]],       // 真夜中
+                [ 4, [2,8,35],        [5,18,60]],       // 深夜
+                [ 5, [40,18,90],      [190,70,20]],     // 夜明け (紫→橙)
+                [ 7, [250,120,50],    [255,210,140]],   // 日の出 (橙→淡黄)
+                [ 9, [80,155,245],    [195,230,255]],   // 朝 (空色→白)
+                [12, [28,115,215],    [100,178,245]],   // 昼 (鮮やかな青)
+                [16, [38,125,220],    [115,185,248]],   // 午後
+                [18, [205,65,15],     [255,140,70]],    // 夕焼け (濃橙→橙)
+                [20, [22,8,55],       [95,25,115]],     // 黄昏 (紺→紫)
+                [22, [2,8,35],        [5,18,60]],       // 夜
+                [24, [2,8,35],        [5,18,60]],
+            ];
+            let p = kf[0], n = kf[kf.length - 1];
+            for (let i = 0; i < kf.length - 1; i++) {
+                if (hour >= kf[i][0] && hour < kf[i+1][0]) { p = kf[i]; n = kf[i+1]; break; }
+            }
+            const t = (hour - p[0]) / ((n[0] - p[0]) || 1);
+            const lr = (a, b) => Math.round(a + (b - a) * t);
+            const [tr,tg,tb] = [lr(p[1][0],n[1][0]), lr(p[1][1],n[1][1]), lr(p[1][2],n[1][2])];
+            const [br,bg,bb] = [lr(p[2][0],n[2][0]), lr(p[2][1],n[2][1]), lr(p[2][2],n[2][2])];
+            return `linear-gradient(to bottom, rgb(${tr},${tg},${tb}), rgb(${br},${bg},${bb}))`;
+        }
+
+        /**
+         * getPlantCrossfade: 成長度から2枚の画像とフロント不透明度を返す
          * 各画像の境界±2.5%（合計5%）の範囲で連続的にブレンドする
          * @returns {{ back: string, front: string, frontOpacity: number }}
          */
@@ -1385,16 +1433,14 @@
 
             // --- LED インジケーター ---
             const ledT = document.getElementById('led-top');
-            const ledM = document.getElementById('led-mid');
-            if (state.ledActive) {
-                ledT.classList.add('led-active');
-                ledM.classList.add('led-active');
-            } else {
-                ledT.classList.remove('led-active');
-                ledM.classList.remove('led-active');
+            if (ledT) {
+                if (state.ledActive) ledT.classList.add('led-active');
+                else                 ledT.classList.remove('led-active');
             }
+            const ledGlow = document.getElementById('led-glow');
+            if (ledGlow) ledGlow.style.opacity = state.ledActive ? '1' : '0';
 
-            // --- LED ON/OFF ボタンのハイライト (現在のLED状態を山映) ---
+            // --- LED ON/OFF ボタンのハイライト (現在のLED状態を反映) ---
             const btnLedOn  = document.getElementById('btn-led-on');
             const btnLedOff = document.getElementById('btn-led-off');
             if (btnLedOn && btnLedOff) {
@@ -1407,9 +1453,6 @@
                 }
             }
 
-            // --- リアルタイム電気代 ---
-            const costEl = document.getElementById('cost-realtime');
-            if (costEl) costEl.textContent = `${simStats.ledCostAcc.toFixed(1)}円`;
             // --- センサーグリッド（経過日数・成長率・ダメージ・電気代）---
             const elDays = document.getElementById('sensor-elapsed-days');
             if (elDays) elDays.textContent = (simStats.totalHours / 24).toFixed(1);
@@ -1420,25 +1463,23 @@
             const elElec = document.getElementById('sensor-electric');
             if (elElec) elElec.textContent = simStats.ledCostAcc.toFixed(1);
 
-            // --- ショーケース明暗オーバーレイ ---
-            const lightRatio = Math.min(1, state.light / 20000);
-            const overlay = document.getElementById('light-overlay');
-            if (overlay) {
-                const hue   = state.ledActive ? 60 : 45;
-                const alpha = (lightRatio * 0.55).toFixed(3);
-                overlay.style.background = `hsla(${hue}, 100%, 95%, ${alpha})`;
+            // --- 空背景（昼夜サイクル）---
+            const skyEl = document.getElementById('sky-bg');
+            if (skyEl) skyEl.style.background = getSkyGradient(Math.floor(simStats.totalHours) % 24);
+
+            // --- 水位フロントオーバーレイ ---
+            const waterH = Math.max(4, 6 + state.waterLevel * 2.5) + Math.sin(Date.now() / 900) * 1.2;
+            const wf = document.getElementById('water-front');
+            if (wf) {
+                wf.style.height = `${waterH}px`;
+                const ecG = Math.max(120, 255 - state.ec * 50);
+                wf.style.background = `rgba(56,${ecG},248,0.28)`;
+                wf.style.borderTopColor = `rgba(56,${ecG},248,0.60)`;
             }
 
-            // --- ショーケース植物 (PNG画像) ---
-            const waterHeight = Math.max(0, 8 + state.waterLevel * 2) + Math.sin(Date.now() / 1000) * 1.5;
-            const ecColor = `rgba(56, ${Math.max(120, 255 - state.ec * 60)}, 248, 0.4)`;
+            // --- ショーケース植物 (PNG 3列) ---
             const fade = getPlantCrossfade(state.growth, state.etiolation, lettuce.state.tipburn, state.damage);
-            for (let i = 1; i <= 6; i++) {
-                const w = document.getElementById(`water-${i}`);
-                if (w) {
-                    w.style.height = `${waterHeight}px`;
-                    w.style.backgroundColor = ecColor;
-                }
+            for (let i = 1; i <= 3; i++) {
                 const p = document.getElementById(`p${i}`);
                 if (!p) continue;
                 let imgs = p.querySelectorAll('img');
@@ -1451,11 +1492,8 @@
                     p.appendChild(imgFront);
                     imgs = p.querySelectorAll('img');
                 }
-                // 毎フレーム src と opacity を直接設定（CSS遷移なし・成長度から単調計算）
-                imgs[0].src = fade.back;
-                imgs[0].style.opacity = '1';
-                imgs[1].src = fade.front;
-                imgs[1].style.opacity = fade.frontOpacity;
+                imgs[0].src = fade.back;   imgs[0].style.opacity = '1';
+                imgs[1].src = fade.front;  imgs[1].style.opacity = fade.frontOpacity;
             }
         }
 
