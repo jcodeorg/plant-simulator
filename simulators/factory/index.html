@@ -172,6 +172,13 @@
         .tab-btn.inactive { background: #f1f5f9; color: #64748b; }
         .tab-btn.inactive:hover { background: #e2e8f0; }
 
+        /* サブタブ */
+        .sub-tab-btn { padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700;
+                       cursor: pointer; transition: background 0.15s, color 0.15s; border: none; }
+        .sub-tab-btn.active   { background: #334155; color: #fff; }
+        .sub-tab-btn.inactive { background: #f1f5f9; color: #64748b; }
+        .sub-tab-btn.inactive:hover { background: #e2e8f0; }
+
         /* 手動ボタン */
         .manual-btn { display: flex; flex-direction: column; align-items: center; justify-content: center;
                       gap: 1px; padding: 5px 0; border-radius: 8px; border: 2px solid;
@@ -329,22 +336,6 @@
                 </div>
             </div>
 
-            <!-- 結果パネル (一時停止・終了時に表示) -->
-            <div id="result-panel" class="hidden">
-                <div id="result-panel-inner" class="rounded-xl border-2 px-3 py-2">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span id="result-icon" class="text-2xl shrink-0"></span>
-                        <div class="flex-1 min-w-0">
-                            <p id="result-title" class="text-sm font-bold text-slate-800 leading-tight"></p>
-                            <p id="result-subtitle" class="text-[10px] text-slate-500"></p>
-                        </div>
-                    </div>
-                    <!-- 分析コメント -->
-                    <ul id="result-comments" class="text-[11px] text-slate-700 space-y-0.5 list-none mb-2"></ul>
-
-                </div>
-            </div>
-
         </div>
 
         <!-- 右側：制御ロジック -->
@@ -355,7 +346,6 @@
                 <div class="flex items-center mb-2">
                     <div class="flex gap-2">
                         <button id="tab-info"  class="tab-btn active"   onclick="switchTab('info')">&#128202; 情報</button>
-                        <button id="tab-chart" class="tab-btn inactive" onclick="switchTab('chart')">&#128200; チャート</button>
                         <button id="tab-code"  class="tab-btn inactive" onclick="switchTab('code')">&#129520; コード</button>
                     </div>
                 </div>
@@ -435,34 +425,63 @@
                             </div>
                         </div>
                     </div>
-                    <!-- ダメージ原因内訳 -->
-                    <div class="mb-2 bg-white border border-slate-200 rounded-lg p-2">
-                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">📊 ダメージ原因内訳 <span class="normal-case font-normal text-slate-400">(現在/時あたり)</span></p>
-                        <div id="stress-breakdown" class="space-y-1.5"></div>
+
+                    <!-- サブタブバー -->
+                    <div class="flex gap-1.5 mb-2 border-b border-slate-200 pb-1.5">
+                        <button id="info-tab-chart"  onclick="switchInfoTab('chart')"  class="sub-tab-btn active">📈 チャート</button>
+                        <button id="info-tab-damage" onclick="switchInfoTab('damage')" class="sub-tab-btn inactive">📊 ダメージ内訳</button>
+                        <button id="info-tab-result" onclick="switchInfoTab('result')" class="sub-tab-btn inactive">📋 分析結果</button>
                     </div>
 
-                </div>
-
-                <!-- チャートタブ -->
-                <div id="panel-chart" class="overflow-y-auto" style="display:none; max-height:calc(100vh - 5.5rem)">
-                    <div class="flex flex-col gap-2">
-                        <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
-                            <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌡️ 気温 (°C)</p>
-                            <div class="chart-wrap"><svg id="chart-temp" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
-                        </div>
-                        <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
-                            <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">💧 湿度 (%)</p>
-                            <div class="chart-wrap"><svg id="chart-humid" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
-                        </div>
-                        <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
-                            <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">☀️ 光量 (lx)</p>
-                            <div class="chart-wrap"><svg id="chart-light" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
-                        </div>
-                        <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
-                            <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌱 成長率 / ダメージ</p>
-                            <div class="chart-wrap"><svg id="chart-growth" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                    <!-- サブパネル: チャート -->
+                    <div id="info-panel-chart">
+                        <div class="flex flex-col gap-2">
+                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌡️ 気温 (°C)</p>
+                                <div class="chart-wrap"><svg id="chart-temp" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                            </div>
+                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">💧 湿度 (%)</p>
+                                <div class="chart-wrap"><svg id="chart-humid" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                            </div>
+                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">☀️ 光量 (lx)</p>
+                                <div class="chart-wrap"><svg id="chart-light" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                            </div>
+                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">🌱 成長率 / ダメージ</p>
+                                <div class="chart-wrap"><svg id="chart-growth" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"></svg></div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- サブパネル: ダメージ原因内訳 -->
+                    <div id="info-panel-damage" style="display:none">
+                        <div class="bg-white border border-slate-200 rounded-lg p-2">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">📊 ダメージ原因内訳 <span class="normal-case font-normal text-slate-400">(現在/時あたり)</span></p>
+                            <div id="stress-breakdown" class="space-y-1.5"></div>
+                        </div>
+                    </div>
+
+                    <!-- サブパネル: 分析結果 -->
+                    <div id="info-panel-result" style="display:none">
+                        <div id="result-panel-placeholder" class="text-center text-slate-400 text-xs py-6">
+                            シミュレーション終了または一時停止すると分析結果が表示されます
+                        </div>
+                        <div id="result-panel" class="hidden">
+                            <div id="result-panel-inner" class="rounded-xl border-2 px-3 py-2">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span id="result-icon" class="text-2xl shrink-0"></span>
+                                    <div class="flex-1 min-w-0">
+                                        <p id="result-title" class="text-sm font-bold text-slate-800 leading-tight"></p>
+                                        <p id="result-subtitle" class="text-[10px] text-slate-500"></p>
+                                    </div>
+                                </div>
+                                <ul id="result-comments" class="text-[11px] text-slate-700 space-y-0.5 list-none"></ul>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- コードタブ -->
@@ -917,9 +936,16 @@
 
         // --- タブ切り替え ---
         function switchTab(tab) {
-            ['info', 'chart', 'code'].forEach(t => {
+            ['info', 'code'].forEach(t => {
                 document.getElementById('panel-' + t).style.display = t === tab ? '' : 'none';
                 document.getElementById('tab-' + t).className = 'tab-btn ' + (t === tab ? 'active' : 'inactive');
+            });
+        }
+
+        function switchInfoTab(sub) {
+            ['chart', 'damage', 'result'].forEach(s => {
+                document.getElementById('info-panel-' + s).style.display = s === sub ? '' : 'none';
+                document.getElementById('info-tab-' + s).className = 'sub-tab-btn ' + (s === sub ? 'active' : 'inactive');
             });
         }
 
@@ -1374,6 +1400,7 @@
                 pauseBtn.textContent = '⏸ 一時停止';
                 pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
                 document.getElementById('result-panel').classList.add('hidden');
+                switchInfoTab('chart');
                 addLog('再開。', 'info');
             }
         }
@@ -1385,6 +1412,7 @@
             pauseBtn.textContent = '⏸ 一時停止';
             pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
             document.getElementById('result-panel').classList.add('hidden');
+            switchInfoTab('chart');
             addLog('シミュレーションを再開しました。', 'info');
         }
 
@@ -1487,9 +1515,11 @@
 
             if (isPause) addLog(`Day ${endDay} 一時停止。`, 'info');
 
-            // 結果パネルを表示して情報タブに切り替え
+            // 結果パネルを表示して分析結果サブタブに切り替え
+            document.getElementById('result-panel-placeholder').style.display = 'none';
             document.getElementById('result-panel').classList.remove('hidden');
             switchTab('info');
+            switchInfoTab('result');
         }
 
         function downloadCSV() {
@@ -1606,8 +1636,10 @@
         }
 
         function resetSim() {
-            // 結果パネルを閉じる
+            // 結果パネルを初期化
             document.getElementById('result-panel').classList.add('hidden');
+            document.getElementById('result-panel-placeholder').style.display = '';
+            switchInfoTab('chart');
 
             // ボタンを初期化
             const startBtn = document.getElementById('btn-start');
