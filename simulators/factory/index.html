@@ -250,6 +250,25 @@
                     <div class="flex items-center justify-between mb-2">
                         <h3 class="font-bold text-slate-700 text-sm">⏱ シミュレーション制御</h3>
                     </div>
+
+                    <!-- タイムラインスクラバー (開始後に表示) -->
+                    <div id="timeline-section" class="hidden mb-2 pb-2 border-b border-slate-100">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[11px] font-bold text-slate-500">⏪ タイムライン</span>
+                            <span class="text-[10px] text-slate-400 font-mono" id="timeline-pos-label">—</span>
+                        </div>
+                        <input type="range" id="timeline-slider" min="0" max="0" step="1" value="0"
+                               class="w-full" oninput="scrubSim(parseInt(this.value))">
+                        <div id="timeline-branch-bar" class="hidden mt-1.5 px-2 py-1.5 bg-purple-50 border border-purple-200 rounded-lg branch-pulse">
+                            <div class="flex items-center justify-between gap-2 flex-wrap">
+                                <span class="text-[11px] text-purple-700 font-bold">🔀 この時点から条件を変えて再開できます</span>
+                                <button onclick="resumeFromSnapshot()" class="text-[11px] bg-purple-500 hover:bg-purple-600 text-white font-bold px-2 py-1 rounded-full transition">
+                                    ↩ この時点から再開
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex gap-2 mb-2 items-center">
                         <button id="btn-start" onclick="startOrReset()" data-mode="start"
                                 class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-full text-sm transition">
@@ -271,24 +290,6 @@
                             <button onclick="stepSpeed(1)"
                                     class="w-9 h-9 flex items-center justify-center bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-full text-sm transition" title="速く">&gt;&gt;</button>
                             <span id="speed-next-label" class="text-[10px] font-bold text-slate-400 mt-0.5">x12</span>
-                        </div>
-                    </div>
-
-                    <!-- タイムラインスクラバー (開始後に表示) -->
-                    <div id="timeline-section" class="hidden mt-1 pt-2 border-t border-slate-100">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-[11px] font-bold text-slate-500">⏪ タイムライン</span>
-                            <span class="text-[10px] text-slate-400 font-mono" id="timeline-pos-label">—</span>
-                        </div>
-                        <input type="range" id="timeline-slider" min="0" max="0" step="1" value="0"
-                               class="w-full" oninput="scrubSim(parseInt(this.value))">
-                        <div id="timeline-branch-bar" class="hidden mt-1.5 px-2 py-1.5 bg-purple-50 border border-purple-200 rounded-lg branch-pulse">
-                            <div class="flex items-center justify-between gap-2 flex-wrap">
-                                <span class="text-[11px] text-purple-700 font-bold">🔀 この時点から条件を変えて再開できます</span>
-                                <button onclick="resumeFromSnapshot()" class="text-[11px] bg-purple-500 hover:bg-purple-600 text-white font-bold px-2 py-1 rounded-full transition">
-                                    ↩ この時点から再開
-                                </button>
-                            </div>
                         </div>
                     </div>
 
