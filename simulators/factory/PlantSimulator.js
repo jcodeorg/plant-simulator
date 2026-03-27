@@ -21,7 +21,7 @@ class PlantSimulator {
         this.state = {
             growth: 0.0,
             damage: 0.0,
-            waterLevel: 0.0,    // 0.0cm基準
+            waterLevel: 5.0,    // 5.0cm渴水目標値
             tipburn: 0.0,       // チップバーン度
             storageDLI: 0.0,    // 光合成エネルギー蓄積量 (上限 1.0)
             isDayLightDeficit: false // 当日昼間に光不足があったフラグ (夜の徒長判定に使用)
@@ -72,7 +72,7 @@ class PlantSimulator {
         if (vpd < 0.8) fVPD = vpd / 0.8;
         else if (vpd > 1.2) fVPD = Math.exp(-(vpd - 1.2));
         
-        const iW = Math.exp(-this.config.kw * Math.pow(this.state.waterLevel, 2)); // 水位応答
+        const iW = Math.exp(-this.config.kw * Math.pow(this.state.waterLevel - 5.0, 2)); // 渴水応答 (5cmからの乖離で成長抸制)
 
         // --- エネルギー蓄積・変換モデル ---
         // 発芽期は暗所発芽が基本のため徒長しない
@@ -140,8 +140,9 @@ class PlantSimulator {
         // --- 5. ダメージ・健康度 ---
         // 環境ストレス (高温・湿度異常)
         const sE = Math.max(0, t - 26) * 0.1 + (Math.abs(h - 60) > 25 ? 0.05 : 0);
-        // 水位ストレス (水切れは致命的)
-        const sW = this.state.waterLevel < -3.0 ? 0.3 : Math.abs(this.state.waterLevel) * 0.03;
+        // 渴水ストレス (5cmからの乖離でダメージ増加、下回りすぎは致命的)
+        const dev = this.state.waterLevel - 5.0;
+        const sW = dev < -3.0 ? 0.3 : Math.abs(dev) * 0.03;
         // 徒長・軟弱化ストレスとチップバーンによる品質低下
         const sTipburn = this.state.tipburn * 0.3;
         // etiolStep を累積せず /h 直接換算 — 他のストレス要因(sE, sW)と同様に扱う

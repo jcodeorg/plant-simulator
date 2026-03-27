@@ -386,7 +386,7 @@
                             <p class="text-[9px] text-slate-400">出力: <span id="sensor-light-total">1200</span></p>
                         </div>
                         <div class="bg-teal-50 p-1.5 rounded-lg border border-teal-100">
-                            <p class="text-[9px] text-teal-600 font-bold uppercase leading-tight">水位</p>
+                            <p class="text-[9px] text-teal-600 font-bold leading-tight">水位（基準5cm）</p>
                             <p class="text-sm font-bold text-slate-700"><span id="sensor-water">0.00</span> cm</p>
                         </div>
                         <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
@@ -619,7 +619,7 @@
             growth: 0,
             humid: 55.0,
             damage: 0,
-            waterLevel: 0,
+            waterLevel: 5,
             ledActive: false,
             ledLux: 8000,           // 現在設定中のLED光量 (lx) 1000〜15000
             etiolation: 0,          // 徒長度 0.0(正常)〜1.0(重度徒長)
@@ -1468,7 +1468,7 @@
             if (skyEl) skyEl.style.background = getSkyGradient(Math.floor(simStats.totalHours) % 24);
 
             // --- 水位フロントオーバーレイ ---
-            const waterH = Math.max(4, 6 + state.waterLevel * 2.5) + Math.sin(Date.now() / 900) * 1.2;
+            const waterH = Math.max(2, state.waterLevel * 3) + Math.sin(Date.now() / 900) * 0.8;
             const wf = document.getElementById('water-front');
             if (wf) {
                 wf.style.height = `${waterH}px`;
@@ -1801,14 +1801,14 @@
             state.growth = 0;
             state.humid  = 55.0;
             state.damage = 0;
-            state.waterLevel = 0;
+            state.waterLevel = 5;
             state.ledActive     = false;
             state.ledLux        = 8000;
             state.etiolation    = 0;
             state.stageName     = '発芽期';
             lettuce.state.growth        = 0;
             lettuce.state.damage        = 0;
-            lettuce.state.waterLevel    = 0;
+            lettuce.state.waterLevel    = 5.0;
             lettuce.state.tipburn       = 0;
             lettuce.state.storageDLI    = 0;
             weatherIndex = 0;
