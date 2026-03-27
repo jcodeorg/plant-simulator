@@ -276,14 +276,9 @@
                         <div id="timeline-branch-bar" class="hidden mt-1.5 px-2 py-1.5 bg-purple-50 border border-purple-200 rounded-lg branch-pulse">
                             <div class="flex items-center justify-between gap-2 flex-wrap">
                                 <span class="text-[11px] text-purple-700 font-bold">🔀 この時点から条件を変えて再開できます</span>
-                                <div class="flex gap-1.5">
-                                    <button onclick="returnToLive()" class="text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-2 py-1 rounded-full transition">
-                                        ▶ 最新に戻る
-                                    </button>
-                                    <button onclick="resumeFromSnapshot()" class="text-[11px] bg-purple-500 hover:bg-purple-600 text-white font-bold px-2 py-1 rounded-full transition">
-                                        ↩ この時点から再開
-                                    </button>
-                                </div>
+                                <button onclick="resumeFromSnapshot()" class="text-[11px] bg-purple-500 hover:bg-purple-600 text-white font-bold px-2 py-1 rounded-full transition">
+                                    ↩ この時点から再開
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1670,10 +1665,23 @@
                 if (lbl) lbl.textContent = timeStr;
             }
 
-            // ライブ先端以外では分岐バーを表示
+            // ライブ先端以外では分岐バーを表示 & btn-pause を「最新に戻る」に切り替え
             const isLive = (idx === snapshots.length - 1);
             const bar = document.getElementById('timeline-branch-bar');
             if (bar) bar.classList.toggle('hidden', isLive);
+
+            const pb = document.getElementById('btn-pause');
+            if (pb && !pb.disabled) {
+                if (isLive) {
+                    pb.textContent = '▶ 再開';
+                    pb.className   = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
+                    pb.onclick     = togglePause;
+                } else {
+                    pb.textContent = '🏠 最新に戻る';
+                    pb.className   = 'flex-1 bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 rounded-full text-sm transition';
+                    pb.onclick     = returnToLive;
+                }
+            }
         }
 
         function resumeFromSnapshot() {
@@ -1705,9 +1713,10 @@
 
             const pb = document.getElementById('btn-pause');
             if (pb) {
-                pb.disabled  = false;
+                pb.disabled    = false;
                 pb.textContent = '⏸ 一時停止';
-                pb.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
+                pb.className   = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
+                pb.onclick     = togglePause;
             }
             const sb = document.getElementById('btn-start');
             if (sb) {
@@ -1739,6 +1748,14 @@
             if (slider) slider.value = liveIdx;
             const bar = document.getElementById('timeline-branch-bar');
             if (bar) bar.classList.add('hidden');
+
+            // btn-pause を「▶ 再開」に戻す
+            const pb = document.getElementById('btn-pause');
+            if (pb && !pb.disabled) {
+                pb.textContent = '▶ 再開';
+                pb.className   = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
+                pb.onclick     = togglePause;
+            }
 
             const wi = Math.min(weatherIndex, weatherData.length - 1);
             if (weatherData.length > 0 && wi >= 0) {
