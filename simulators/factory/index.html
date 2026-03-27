@@ -121,12 +121,17 @@
         }
         .plant-unit {
             z-index: 2;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            min-height: 12px;
+            display: grid;
+            align-items: end;
+            justify-items: center;
             filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
             transition: filter 0.3s;
+        }
+        .plant-unit img {
+            grid-area: 1 / 1;
+            height: 60px;
+            width: auto;
+            object-fit: contain;
         }
 
         /* ステージタイムライン */
@@ -1085,7 +1090,7 @@
                     stressCumul.etiol    += sbr.etiol;
                     stressCumul.tipburn  += sbr.tipburn;
                     stressCumul.recovery += sbr.recovery;
-                    // etiolation は SVG描画専用の視覚的累積値（ダメージ計算には使わない）
+                    // etiolation は画像選択用の視覚的累積値（ダメージ計算には使わない）
                     state.etiolation = stressCumul.etiol;
                     // 統計更新
                     simStats.totalHours++;
@@ -1147,69 +1152,36 @@
         }
 
         /**
-         * 成長ステージ・健康状態を反映したCSS植物SVGを生成
-         * @param {number} growth     0–1000の成長% (state.growth)
-         * @param {number} etiolation 0–1.0 徒長度
-         * @param {number} damage     0–1.0 ダメージ
+         * 成長度から back/front 画像と front の不透明度を計算する（クロスフェード用）
+         * 各画像の境界±2.5%（合計5%）の範囲で連続的にブレンドする
+         * @returns {{ back: string, front: string, frontOpacity: number }}
          */
-        function makePlantSVG(growth, etiolation, damage) {
-            const g  = Math.min(1, Math.max(0, growth / 100));
+        function getPlantCrossfade(growth, etiolation, tipburn, damage) {
+            // 特殊状態は即切替（単一画像でフェードなし）
+            if (damage >= 1.0)      return { back: 'img/lettuce_9.png', front: 'img/lettuce_9.png', frontOpacity: 1 };
+            if (etiolation >= 0.5)  return { back: 'img/lettuce_7.png', front: 'img/lettuce_7.png', frontOpacity: 1 };
+            if (tipburn    >= 0.5)  return { back: 'img/lettuce_8.png', front: 'img/lettuce_8.png', frontOpacity: 1 };
 
-            // 種: 小さな茶色楕円
-            if (g < 0.02) {
-                return `<svg width="10" height="10" viewBox="0 0 10 10">
-                    <ellipse cx="5" cy="7" rx="4" ry="3" fill="#a07040"/>
-                </svg>`;
+            const N    = 6;           // 画像枚数 (lettuce_0〜5)
+            const step = 100 / N;     // 1枚あたりの成長幅 ≈ 16.67%
+            const half = 2.5;         // クロスフェード幅 5% の半分
+
+            // 各境界付近でクロスフェード
+            for (let n = 1; n < N; n++) {
+                const b = n * step;   // 境界の成長%
+                if (growth >= b - half && growth <= b + half) {
+                    const t = (growth - (b - half)) / (half * 2); // 0→1
+                    return {
+                        back:         `img/lettuce_${n - 1}.png`,
+                        front:        `img/lettuce_${n}.png`,
+                        frontOpacity: Math.max(0, Math.min(1, t))
+                    };
+                }
             }
 
-            // 葉の色: 健康=深緑 → 徒長=黄白 → ダメージ=視色諪色
-            const leafHue = Math.round(118 - etiolation * 55);
-            const leafSat = Math.round(65  - damage    * 35);
-            const leafLit = Math.round(34  + etiolation * 24 + damage * 8);
-            const leafCol  = `hsl(${leafHue},${leafSat}%,${leafLit}%)`;
-            const darkLeaf = `hsl(${leafHue},${Math.round(leafSat * 0.7)}%,${Math.round(leafLit * 0.65)}%)`;
-            const stemCol  = `hsl(${Math.round(100 - etiolation*30)},${Math.round(55 - damage*25)}%,${Math.round(26 + etiolation*12)}%)`;
-
-            // ステージ別基本対度
-            const si       = g < 0.1 ? 0 : g < 0.3 ? 1 : g < 0.7 ? 2 : 3;
-            const baseStemH  = [10, 20, 32, 26][si];
-            const baseCrownW = [10, 18, 30, 40][si];
-            const baseCrownH = [ 7, 12, 19, 26][si];
-            const baseStemW  = [ 2,  3,  4,  5][si];
-
-            // 徒長効果: 茎が伸び階が細くなり、冠部が小さくなる
-            const stemH  = Math.round(baseStemH  * (1 + etiolation * 0.7));
-            const crownW = Math.round(baseCrownW * (1 - etiolation * 0.35));
-            const crownH = Math.round(baseCrownH * (1 - etiolation * 0.40));
-            const stemW  = Math.max(1, Math.round(baseStemW * (1 - etiolation * 0.4)));
-
-            const totalW = crownW + 4;
-            const totalH = stemH  + crownH + 4;
-            const cx = totalW / 2;
-            const cy = crownH / 2 + 2;
-
-            let crownShape;
-            if (si === 3) {
-                // 成熟期: ロゼット形—複数の楕円でレタスらしさを表現
-                crownShape = `
-                    <ellipse cx="${cx}" cy="${cy}" rx="${crownW/2}" ry="${crownH/2}" fill="${leafCol}"/>
-                    <ellipse cx="${cx - crownW*0.2}" cy="${cy - crownH*0.15}" rx="${crownW*0.30}" ry="${crownH*0.45}" fill="${darkLeaf}" opacity="0.45"/>
-                    <ellipse cx="${cx + crownW*0.2}" cy="${cy - crownH*0.15}" rx="${crownW*0.30}" ry="${crownH*0.45}" fill="${darkLeaf}" opacity="0.45"/>
-                    <ellipse cx="${cx}" cy="${cy + crownH*0.1}" rx="${crownW*0.25}" ry="${crownH*0.32}" fill="${leafCol}" opacity="0.8"/>`;
-            } else if (si >= 1) {
-                // 幼苗期/生育期: ⋑葉の陰影で立体感
-                crownShape = `
-                    <ellipse cx="${cx}" cy="${cy}" rx="${crownW/2}" ry="${crownH/2}" fill="${leafCol}"/>
-                    <ellipse cx="${cx}" cy="${cy + 2}" rx="${crownW*0.38}" ry="${crownH*0.33}" fill="${darkLeaf}" opacity="0.38"/>`;
-            } else {
-                // 発芽期: 丸い子葉
-                crownShape = `<ellipse cx="${cx}" cy="${cy}" rx="${crownW/2}" ry="${crownH/2}" fill="${leafCol}"/>`;
-            }
-
-            return `<svg width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}" style="overflow:visible;display:block">
-                ${crownShape}
-                <rect x="${cx - stemW/2}" y="${cy + crownH/2 - 1}" width="${stemW}" height="${stemH + 2}" rx="1" fill="${stemCol}"/>
-            </svg>`;
+            // 境界外: ソリッド表示
+            const idx = Math.min(N - 1, Math.floor(growth / step));
+            return { back: `img/lettuce_${idx}.png`, front: `img/lettuce_${idx}.png`, frontOpacity: 1 };
         }
 
         function render() {
@@ -1364,10 +1336,10 @@
                 overlay.style.background = `hsla(${hue}, 100%, 95%, ${alpha})`;
             }
 
-            // --- ショーケース植物 (CSS SVG) ---
+            // --- ショーケース植物 (PNG画像) ---
             const waterHeight = Math.max(0, 8 + state.waterLevel * 2) + Math.sin(Date.now() / 1000) * 1.5;
             const ecColor = `rgba(56, ${Math.max(120, 255 - state.ec * 60)}, 248, 0.4)`;
-            const plantSVG = makePlantSVG(state.growth, state.etiolation, state.damage);
+            const fade = getPlantCrossfade(state.growth, state.etiolation, lettuce.state.tipburn, state.damage);
             for (let i = 1; i <= 6; i++) {
                 const w = document.getElementById(`water-${i}`);
                 if (w) {
@@ -1375,7 +1347,22 @@
                     w.style.backgroundColor = ecColor;
                 }
                 const p = document.getElementById(`p${i}`);
-                if (p) p.innerHTML = plantSVG;
+                if (!p) continue;
+                let imgs = p.querySelectorAll('img');
+                if (imgs.length < 2) {
+                    p.innerHTML = '';
+                    const imgBack  = document.createElement('img');
+                    imgBack.style.opacity = '1';
+                    const imgFront = document.createElement('img');
+                    p.appendChild(imgBack);
+                    p.appendChild(imgFront);
+                    imgs = p.querySelectorAll('img');
+                }
+                // 毎フレーム src と opacity を直接設定（CSS遷移なし・成長度から単調計算）
+                imgs[0].src = fade.back;
+                imgs[0].style.opacity = '1';
+                imgs[1].src = fade.front;
+                imgs[1].style.opacity = fade.frontOpacity;
             }
         }
 
