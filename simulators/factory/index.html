@@ -469,10 +469,11 @@
                             <div class="stage-cursor" id="stage-cursor" style="left:0%"></div>
                         </div>
                         <div class="flex items-center justify-between mt-1.5">
-                            <span class="text-[11px] font-bold text-purple-700" id="sensor-stage">発芽期</span>
-                            <div class="flex items-center gap-2">
-                                <span id="light-warn" class="hidden text-[10px] font-bold text-amber-600">⚠️ 光量不足</span>
-                                <span class="text-[10px] text-slate-500 font-mono" id="sens-growth-pct">0.0%</span>
+                            <span class="text-base font-bold text-purple-700" id="sensor-stage">発芽期</span>
+                            <div class="flex items-center gap-3">
+                                <span id="light-warn" class="hidden text-xs font-bold text-amber-600">⚠️ 光量不足</span>
+                                <span class="text-base font-mono font-bold text-emerald-600">成長率 <span id="sens-growth-pct">0.0%</span></span>
+                                <span class="text-base font-mono font-bold text-rose-500">ダメージ <span id="info-damage-pct">0.0%</span></span>
                             </div>
                         </div>
                     </div>
@@ -1403,11 +1404,12 @@
                 const mkCard = (icon, label, v, cumV, cls, tip) => {
                     const on = v > 1e-6 || cumV > 1e-4;
                     const hourStr = v > 1e-6 ? `+${pHour(v)}/h` : '—';
-                    const valCls  = v > 1e-6 ? 'text-rose-600 font-bold' : 'text-slate-300';
+                    const cumCls  = cumV > 1e-4 ? 'text-rose-600 font-bold' : 'text-slate-300';
+                    const subCls  = v > 1e-6 ? 'text-slate-400' : 'text-slate-200';
                     return `<div class="${on ? '' : 'opacity-40'}" title="${tip}">` +
-                        `<p class="text-[8px] text-slate-500 leading-tight mb-0.5">${icon} ${label}</p>` +
+                        `<p class="text-[9px] text-slate-500 leading-tight mb-0.5">${icon} ${label}</p>` +
                         `<div class="w-full bg-slate-100 rounded-full h-1 mb-0.5"><div class="h-1 rounded-full ${cls} transition-all" style="width:${barPct(cumV)}%"></div></div>` +
-                        `<p class="text-[9px] font-mono ${valCls}">${hourStr}<span class="text-slate-300 font-normal"> (${pCum(cumV)}%)</span></p>` +
+                        `<p class="text-[11px] font-mono ${cumCls}">${pCum(cumV)}%<span class="text-[9px] font-normal ${subCls}"> (${hourStr})</span></p>` +
                     `</div>`;
                 };
                 sbEl.innerHTML =
@@ -1434,6 +1436,8 @@
             if (reqEl) reqEl.textContent = `💡 ${STAGE_MIN_LIGHT[si]}lx | 🌡️ ${STAGE_OPT_TEMP[si]}°C`;
             const growPct = document.getElementById('sens-growth-pct');
             if (growPct) growPct.textContent = `${state.growth.toFixed(1)}%`;
+            const infoDmg = document.getElementById('info-damage-pct');
+            if (infoDmg) infoDmg.textContent = `${(state.damage * 100).toFixed(1)}%`;
             // 光量不足警告（昼間 100lx 以上のときのみ表示）
             const lightWarn = document.getElementById('light-warn');
             if (lightWarn) lightWarn.classList.toggle('hidden', state.sunLux < 100 || state.light >= STAGE_MIN_LIGHT[si]);
