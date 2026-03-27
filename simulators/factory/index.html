@@ -378,6 +378,10 @@
                             <p class="text-sm font-bold text-slate-700"><span id="sensor-light">1200</span> <small>lx</small></p>
                             <p class="text-[9px] text-slate-400">出力: <span id="sensor-light-total">1200</span></p>
                         </div>
+                        <div class="bg-teal-50 p-1.5 rounded-lg border border-teal-100">
+                            <p class="text-[9px] text-teal-600 font-bold uppercase leading-tight">水位</p>
+                            <p class="text-sm font-bold text-slate-700"><span id="sensor-water">0.00</span> cm</p>
+                        </div>
                         <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
                             <p class="text-[9px] text-slate-500 font-bold uppercase leading-tight">経過日数</p>
                             <p class="text-sm font-bold text-slate-700"><span id="sensor-elapsed-days">0.0</span>日</p>
@@ -390,7 +394,7 @@
                             <p class="text-[9px] text-rose-600 font-bold uppercase leading-tight">ダメージ</p>
                             <p class="text-sm font-bold text-rose-600"><span id="sensor-damage-pct">0.0</span>%</p>
                         </div>
-                        <div class="bg-yellow-50 p-1.5 rounded-lg border border-yellow-100 col-span-2">
+                        <div class="bg-yellow-50 p-1.5 rounded-lg border border-yellow-100">
                             <p class="text-[9px] text-yellow-700 font-bold uppercase leading-tight">電気代（累積）</p>
                             <p class="text-sm font-bold text-yellow-800"><span id="sensor-electric">0.0</span>円</p>
                         </div>
@@ -422,32 +426,14 @@
                         </div>
                     </div>
 
-                    <!-- 植物ステータス: ダメージ・水位 (徒長はダメージ原因内訳に統合) -->
-                    <div class="grid grid-cols-2 gap-2 mb-2 text-sm">
+                    <!-- 植物ステータス: ダメージ -->
+                    <div class="mb-2 text-sm">
                         <div class="bg-rose-50 p-2 rounded-lg border border-rose-100">
                             <p class="text-[10px] text-rose-600 font-bold uppercase">Damage (ダメージ)</p>
                             <div class="w-full bg-rose-200 rounded-full h-2 mt-2">
                                 <div id="damage-bar" class="bg-rose-500 h-2 rounded-full transition-all" style="width: 0%"></div>
                             </div>
                         </div>
-                        <div class="bg-teal-50 p-2 rounded-lg border border-teal-100">
-                            <p class="text-[10px] text-teal-600 font-bold uppercase">Water Level (水位差)</p>
-                            <p class="text-lg font-bold text-slate-700"><span id="sensor-water">0.00</span> cm</p>
-                        </div>
-                    </div>
-                    <!-- エネルギー蓄積バー -->
-                    <div class="mb-2 bg-lime-50 border border-lime-200 rounded-lg px-3 py-2 flex items-center gap-3">
-                        <span class="text-[10px] font-bold text-lime-700 shrink-0">⚡ エネルギー蓄積</span>
-                        <div class="flex-1 bg-lime-200 rounded-full h-2">
-                            <div id="storage-bar" class="bg-lime-500 h-2 rounded-full transition-all" style="width: 0%"></div>
-                        </div>
-                        <span id="storage-val" class="text-[10px] font-mono text-lime-800 shrink-0 w-[36px] text-right">0%</span>
-                        <span id="storage-status" class="text-[10px] font-bold shrink-0"></span>
-                    </div>
-                    <!-- LED電気代（累積） -->
-                    <div class="mb-2 flex items-center justify-between bg-yellow-50 rounded-lg px-3 py-1.5 border border-yellow-100">
-                        <span class="text-[10px] text-yellow-700 font-bold">⚡ LED電気代（累積）</span>
-                        <span id="cost-realtime" class="text-[10px] font-bold text-yellow-800">0.0円</span>
                     </div>
                     <!-- ダメージ原因内訳 -->
                     <div class="mb-2 bg-white border border-slate-200 rounded-lg p-2">
