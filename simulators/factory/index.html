@@ -259,10 +259,6 @@
                                 class="flex-1 bg-slate-300 text-slate-500 font-bold py-2 rounded-full text-sm transition cursor-not-allowed">
                             ⏸ 一時停止
                         </button>
-                        <button id="btn-csv" onclick="downloadCSV()"
-                                class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition">
-                            📥 CSV
-                        </button>
                     </div>
 
                     <!-- タイムラインスクラバー (開始後に表示) -->
@@ -494,21 +490,20 @@
 
                     <!-- サブパネル: 分析結果 -->
                     <div id="info-panel-result" style="display:none">
-                        <div id="result-panel-placeholder" class="text-center text-slate-400 text-xs py-6">
-                            シミュレーション終了または一時停止すると分析結果が表示されます
-                        </div>
-                        <div id="result-panel" class="hidden">
-                            <div id="result-panel-inner" class="rounded-xl border-2 px-3 py-2">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span id="result-icon" class="text-2xl shrink-0"></span>
-                                    <div class="flex-1 min-w-0">
-                                        <p id="result-title" class="text-sm font-bold text-slate-800 leading-tight"></p>
-                                        <p id="result-subtitle" class="text-[10px] text-slate-500"></p>
-                                    </div>
+                        <div id="result-panel-inner" class="rounded-xl border-2 px-3 py-2 border-slate-200 bg-slate-50">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span id="result-icon" class="text-2xl shrink-0">⏸</span>
+                                <div class="flex-1 min-w-0">
+                                    <p id="result-title" class="text-sm font-bold text-slate-500 leading-tight">待機中</p>
+                                    <p id="result-subtitle" class="text-[10px] text-slate-400">シミュレーションを開始・一時停止すると分析結果が表示されます</p>
                                 </div>
-                                <ul id="result-comments" class="text-[11px] text-slate-700 space-y-0.5 list-none"></ul>
                             </div>
+                            <ul id="result-comments" class="text-[11px] text-slate-700 space-y-0.5 list-none"></ul>
                         </div>
+                        <button onclick="downloadCSV()"
+                                class="mt-2 w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition">
+                            📥 CSV ダウンロード
+                        </button>
                     </div>
 
                 </div>
@@ -1604,7 +1599,7 @@
                 setStatusBadge(true);
                 pauseBtn.textContent = '⏸ 一時停止';
                 pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
-                document.getElementById('result-panel').classList.add('hidden');
+                resetResult();
                 switchInfoTab('chart');
                 addLog('再開。', 'info');
             }
@@ -1616,7 +1611,7 @@
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.textContent = '⏸ 一時停止';
             pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
-            document.getElementById('result-panel').classList.add('hidden');
+            resetResult();
             switchInfoTab('chart');
             addLog('シミュレーションを再開しました。', 'info');
         }
@@ -1645,6 +1640,7 @@
                 if (pb && !pb.disabled) {
                     pb.textContent = '▶ 再開';
                     pb.className = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
+                    pb.onclick = togglePause;
                 }
             }
 
@@ -1725,13 +1721,11 @@
                 sb.textContent  = '🔄 リセット';
             }
 
-            document.getElementById('result-panel').classList.add('hidden');
-            document.getElementById('result-panel-placeholder').style.display = '';
+            resetResult();
             switchInfoTab('chart');
         }
 
         function returnToLive() {
-            if (snapshots.length === 0) return;
             const liveIdx = snapshots.length - 1;
             const snap    = snapshots[liveIdx];
 
@@ -1783,6 +1777,15 @@
                     lbl.textContent = `Day ${w.day} - ${String(w.hour).padStart(2,'0')}:00`;
                 }
             }
+        }
+
+        function resetResult() {
+            document.getElementById('result-icon').textContent  = '⏸';
+            document.getElementById('result-title').textContent = '待機中';
+            document.getElementById('result-subtitle').textContent = 'シミュレーションを開始・一時停止すると分析結果が表示されます';
+            document.getElementById('result-comments').innerHTML = '';
+            document.getElementById('result-panel-inner').className =
+                'rounded-xl border-2 px-3 py-2 border-slate-200 bg-slate-50';
         }
 
         function showResult(outcome, endDay) {
@@ -1874,9 +1877,7 @@
 
             if (isPause) addLog(`Day ${endDay} 一時停止。`, 'info');
 
-            // 結果パネルを表示して分析結果サブタブに切り替え
-            document.getElementById('result-panel-placeholder').style.display = 'none';
-            document.getElementById('result-panel').classList.remove('hidden');
+            // 分析結果サブタブに切り替え
             switchTab('info');
             switchInfoTab('result');
         }
@@ -1995,9 +1996,8 @@
         }
 
         function resetSim() {
-            // 結果パネルを初期化
-            document.getElementById('result-panel').classList.add('hidden');
-            document.getElementById('result-panel-placeholder').style.display = '';
+            // 結果パネルを初期状態に戻す
+            resetResult();
             switchInfoTab('chart');
 
             // ボタンを初期化
