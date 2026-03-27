@@ -325,6 +325,27 @@
                 </div>
             </div>
 
+            <!-- 結果パネル (一時停止・終了時に表示) -->
+            <div id="result-panel" class="hidden">
+                <div id="result-panel-inner" class="rounded-xl border-2 px-3 py-2">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span id="result-icon" class="text-2xl shrink-0"></span>
+                        <div class="flex-1 min-w-0">
+                            <p id="result-title" class="text-sm font-bold text-slate-800 leading-tight"></p>
+                            <p id="result-subtitle" class="text-[10px] text-slate-500"></p>
+                        </div>
+                    </div>
+                    <!-- 分析コメント -->
+                    <ul id="result-comments" class="text-[11px] text-slate-700 space-y-0.5 list-none mb-2"></ul>
+                    <!-- ボタン -->
+                    <div class="flex gap-1.5">
+                        <button id="res-resume-btn" onclick="resumeFromPause()" class="hidden flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-full transition text-xs">▶ 再開する</button>
+                        <button onclick="downloadCSV()" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full transition text-xs">📥 CSV</button>
+                        <button id="res-reset-btn" onclick="resetSim()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-full transition text-xs">🔄 リセット</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="bg-slate-900 text-green-400 p-4 rounded-xl shadow-inner border border-slate-700">
                 <div id="log" class="log-panel"></div>
             </div>
@@ -345,7 +366,8 @@
 
                 <!-- 情報タブ -->
                 <div id="panel-info" class="overflow-y-auto" style="max-height:calc(100vh - 5.5rem)">
-                    <!-- 環境センサー 1×4 -->
+
+                    <!-- 環境センサー 4列×2行 -->
                     <div class="grid grid-cols-4 gap-2 mb-2">
                         <div class="bg-blue-50 p-1.5 rounded-lg border border-blue-100">
                             <p class="text-[9px] text-blue-600 font-bold uppercase leading-tight">気温</p>
@@ -355,16 +377,30 @@
                             <p class="text-[9px] text-sky-600 font-bold uppercase leading-tight">湿度</p>
                             <p class="text-sm font-bold text-slate-700"><span id="sensor-humid">55.0</span>%</p>
                         </div>
-                        <div class="bg-green-50 p-1.5 rounded-lg border border-green-100">
-                            <p class="text-[9px] text-green-600 font-bold uppercase leading-tight">EC値</p>
-                            <p class="text-sm font-bold text-slate-700"><span id="sensor-ec">1.2</span> <small>mS</small></p>
-                        </div>
                         <div class="bg-yellow-50 p-1.5 rounded-lg border border-yellow-100">
                             <p class="text-[9px] text-yellow-600 font-bold uppercase leading-tight">太陽光</p>
                             <p class="text-sm font-bold text-slate-700"><span id="sensor-light">1200</span> <small>lx</small></p>
                             <p class="text-[9px] text-slate-400">出力: <span id="sensor-light-total">1200</span></p>
                         </div>
+                        <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                            <p class="text-[9px] text-slate-500 font-bold uppercase leading-tight">経過日数</p>
+                            <p class="text-sm font-bold text-slate-700"><span id="sensor-elapsed-days">0.0</span>日</p>
+                        </div>
+                        <div class="bg-purple-50 p-1.5 rounded-lg border border-purple-100">
+                            <p class="text-[9px] text-purple-600 font-bold uppercase leading-tight">成長率</p>
+                            <p class="text-sm font-bold text-purple-700"><span id="sensor-growth-rate">0.0</span>%</p>
+                        </div>
+                        <div class="bg-rose-50 p-1.5 rounded-lg border border-rose-100">
+                            <p class="text-[9px] text-rose-600 font-bold uppercase leading-tight">ダメージ</p>
+                            <p class="text-sm font-bold text-rose-600"><span id="sensor-damage-pct">0.0</span>%</p>
+                        </div>
+                        <div class="bg-yellow-50 p-1.5 rounded-lg border border-yellow-100 col-span-2">
+                            <p class="text-[9px] text-yellow-700 font-bold uppercase leading-tight">電気代（累積）</p>
+                            <p class="text-sm font-bold text-yellow-800"><span id="sensor-electric">0.0</span>円</p>
+                        </div>
                     </div>
+                    <!-- EC値（非表示・render用） -->
+                    <span id="sensor-ec" class="hidden">1.2</span>
 
                     <!-- ステージタイムライン (フル幅) -->
                     <div class="mb-2 bg-slate-50 rounded-lg px-2 pt-1.5 pb-1.5 border border-slate-200">
@@ -559,63 +595,6 @@
     </div>
 
     <!-- 結果モーダル -->
-    <div id="result-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 px-5 py-3 w-full max-w-2xl mx-3">
-            <div class="flex items-center gap-3 mb-3">
-                <div id="result-icon" class="text-3xl shrink-0"></div>
-                <div>
-                    <h2 id="result-title" class="text-base font-bold text-slate-800 leading-tight"></h2>
-                    <p id="result-subtitle" class="text-xs text-slate-500 mt-0.5"></p>
-                </div>
-            </div>
-            <!-- スコアグリッド: 5カラム -->
-            <div class="grid grid-cols-5 gap-2 mb-3">
-                <div class="bg-slate-50 rounded-lg px-2 py-1.5 border border-slate-200 text-center">
-                    <p class="text-[9px] text-slate-500 font-bold uppercase">到達ステージ</p>
-                    <p class="text-xs font-bold text-slate-700 leading-tight mt-1" id="res-stage">-</p>
-                </div>
-                <div class="bg-purple-50 rounded-lg px-2 py-1.5 border border-purple-100 text-center">
-                    <p class="text-[9px] text-purple-600 font-bold uppercase">最終成長率</p>
-                    <p class="text-lg font-bold text-purple-700 leading-tight" id="res-growth">-</p>
-                </div>
-                <div class="bg-sky-50 rounded-lg px-2 py-1.5 border border-sky-100 text-center">
-                    <p class="text-[9px] text-sky-600 font-bold uppercase">経過日数</p>
-                    <p class="text-lg font-bold text-sky-700 leading-tight" id="res-days">-</p>
-                </div>
-                <div class="bg-rose-50 rounded-lg px-2 py-1.5 border border-rose-100 text-center">
-                    <p class="text-[9px] text-rose-600 font-bold uppercase">ダメージ</p>
-                    <p class="text-lg font-bold text-rose-600 leading-tight" id="res-damage">-</p>
-                </div>
-                <div class="bg-yellow-50 rounded-lg px-2 py-1.5 border border-yellow-100 text-center">
-                    <p class="text-[9px] text-yellow-700 font-bold uppercase">電気代</p>
-                    <p class="text-base font-bold text-yellow-700 leading-tight mt-1" id="res-electric">-</p>
-                </div>
-            </div>
-            <!-- ダメージ要因分析 -->
-            <div class="bg-rose-50 rounded-lg px-3 py-2 border border-rose-100 mb-3">
-                <p class="text-[9px] text-rose-600 font-bold uppercase mb-1.5">📊 ダメージ主要因分析</p>
-                <div id="res-damage-breakdown" class="space-y-1"></div>
-            </div>
-
-            <!-- 分析コメント -->
-            <div class="bg-slate-50 rounded-lg px-3 py-2 border border-slate-200 mb-3">
-                <p class="text-[9px] text-slate-500 font-bold uppercase mb-1">💡 分析</p>
-                <ul id="result-comments" class="text-xs text-slate-700 space-y-0.5 list-none"></ul>
-            </div>
-            <div class="flex gap-2">
-                <button id="modal-resume-btn" onclick="resumeFromPause()" class="hidden flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 rounded-full transition text-sm">
-                    ▶ 再開する
-                </button>
-                <button id="modal-csv-btn" onclick="downloadCSV()" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2.5 rounded-full transition text-sm">
-                    📥 CSVダウンロード
-                </button>
-                <button id="modal-reset-btn" onclick="resetSim()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-full transition text-sm">
-                    🔄 新しいシミュレーション
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script src="WeatherGenerator.js"></script>
     <script src="PlantSimulator.js"></script>
     <script>
@@ -1326,6 +1305,15 @@
             // --- リアルタイム電気代 ---
             const costEl = document.getElementById('cost-realtime');
             if (costEl) costEl.textContent = `${simStats.ledCostAcc.toFixed(1)}円`;
+            // --- センサーグリッド（経過日数・成長率・ダメージ・電気代）---
+            const elDays = document.getElementById('sensor-elapsed-days');
+            if (elDays) elDays.textContent = (simStats.totalHours / 24).toFixed(1);
+            const elGrowth = document.getElementById('sensor-growth-rate');
+            if (elGrowth) elGrowth.textContent = state.growth.toFixed(1);
+            const elDmg = document.getElementById('sensor-damage-pct');
+            if (elDmg) elDmg.textContent = (state.damage * 100).toFixed(1);
+            const elElec = document.getElementById('sensor-electric');
+            if (elElec) elElec.textContent = simStats.ledCostAcc.toFixed(1);
 
             // --- ショーケース明暗オーバーレイ ---
             const lightRatio = Math.min(1, state.light / 20000);
@@ -1392,7 +1380,6 @@
                 setStatusBadge(false);
                 pauseBtn.textContent = '▶ 再開';
                 pauseBtn.className = 'flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 rounded-full text-sm transition';
-                // 一時停止時に中間評価モーダルを表示
                 const ci = Math.min(weatherIndex, weatherData.length - 1);
                 const cw = weatherData[ci];
                 showResult('paused', cw.day);
@@ -1400,17 +1387,18 @@
                 setStatusBadge(true);
                 pauseBtn.textContent = '⏸ 一時停止';
                 pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
+                document.getElementById('result-panel').classList.add('hidden');
                 addLog('再開。', 'info');
             }
         }
 
         function resumeFromPause() {
-            document.getElementById('result-modal').classList.add('hidden');
             simPaused = false;
             setStatusBadge(true);
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.textContent = '⏸ 一時停止';
             pauseBtn.className = 'flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 rounded-full text-sm transition';
+            document.getElementById('result-panel').classList.add('hidden');
             addLog('シミュレーションを再開しました。', 'info');
         }
 
@@ -1452,62 +1440,29 @@
             document.getElementById('result-title').textContent = titles[outcome];
             document.getElementById('result-subtitle').textContent = subtitles[outcome];
 
-            document.getElementById('res-growth').textContent   = `${state.growth.toFixed(1)}%`;
-            document.getElementById('res-damage').textContent   = `${(state.damage * 100).toFixed(1)}%`;
-            //document.getElementById('res-etiol').textContent    = `${(state.etiolation * 100).toFixed(1)}%`;
-            const elapsedDays = (simStats.totalHours / 24).toFixed(1);
-            document.getElementById('res-days').textContent     = `${elapsedDays}日`;
             const ledPct = simStats.totalHours > 0
                 ? Math.round(simStats.ledOnHours / simStats.totalHours * 100) : 0;
-            document.getElementById('res-stage').textContent    = state.stageName;
 
-            // 電気代計算: 8000lx = 2.4円/h を基準に光量比例
-            const electricCost = simStats.ledCostAcc.toFixed(0);
-            const resElecEl = document.getElementById('res-electric');
-            if (resElecEl) resElecEl.textContent = `¥${Number(electricCost).toLocaleString()}円`;
-
-            // ダメージ要因分析
+            // ダメージ要因分析（累積値を重大順にソートしてコメントに統合）
             const dmgFactors = [
-                { key: 'env',     label: '高温・湿度',   icon: '🌡️', color: 'bg-orange-400', tip: 'LED冷却や日陰対策・昼間の換気を強化してください。' },
-                { key: 'water',   label: '水過不足',     icon: '💧', color: 'bg-blue-400',   tip: '自動灌水ブロックで水位を一定に保つと改善できます。' },
-                { key: 'etiol',   label: '徒長',         icon: '🌿', color: 'bg-yellow-500', tip: 'LED照明を強化するか、日照時間を延長してください。' },
-                { key: 'tipburn', label: 'チップバーン', icon: '🍂', color: 'bg-red-400',    tip: 'ピーク照度を抑え、温度を下げると発生を抑制できます。' },
+                { key: 'env',     label: '高温・湿度',   icon: '🌡️', tip: 'LED冷却や日陰対策・昼間の換気を強化してください。' },
+                { key: 'water',   label: '水過不足',     icon: '💧', tip: '自動灌水ブロックで水位を一定に保つと改善できます。' },
+                { key: 'etiol',   label: '徒長',         icon: '🌿', tip: 'LED照明を強化するか、日照時間を延長してください。' },
+                { key: 'tipburn', label: 'チップバーン', icon: '🍂', tip: 'ピーク照度を抑え、温度を下げると発生を抑制できます。' },
             ];
             const sortedFactors = [...dmgFactors].sort((a, b) => (stressCumul[b.key] || 0) - (stressCumul[a.key] || 0));
-            const breakdownEl = document.getElementById('res-damage-breakdown');
-            if (breakdownEl) {
-                if ((stressCumul[sortedFactors[0].key] || 0) > 1e-6) {
-                    breakdownEl.innerHTML = sortedFactors.map(f => {
-                        const val = stressCumul[f.key] || 0;
-                        const barW = Math.min(100, val * 100);
-                        const dispVal = (val * 100).toFixed(2);
-                        return `<div class="flex items-center gap-1.5">
-                            <span class="text-[11px] w-4 text-center shrink-0">${f.icon}</span>
-                            <span class="text-[10px] w-[72px] text-slate-600 shrink-0">${f.label}</span>
-                            <div class="flex-1 bg-slate-200 rounded-full h-2">
-                                <div class="h-2 rounded-full ${f.color} transition-all" style="width:${barW}%"></div>
-                            </div>
-                            <span class="text-[10px] font-mono w-12 text-right text-slate-700 font-bold">${dispVal}%</span>
-                        </div>`;
-                    }).join('');
-                } else {
-                    breakdownEl.innerHTML = '<p class="text-[10px] text-slate-400">ダメージ要因なし（理想的な環境管理です！）</p>';
-                }
-            }
 
             // 分析コメント生成
             const comments = [];
             if (outcome === 'harvested' && state.damage < 0.05) {
                 comments.push({ icon: '✅', text: '理想的な成長サイクルを完遂しました！' });
             }
-            // 主要因に基づくコメント（絶対値で判定）
             if ((stressCumul[sortedFactors[0].key] || 0) > 1e-4) {
                 const top = sortedFactors[0];
                 const top2 = sortedFactors[1];
                 const topVal  = (stressCumul[top.key]  || 0) * 100;
                 const top2Val = (stressCumul[top2.key] || 0) * 100;
                 if (top2Val < topVal * 0.5) {
-                    // 1位が2位の2倍以上 → 単独主因
                     comments.push({ icon: '🔍', text: `ダメージの主因は「${top.label}」(累積${topVal.toFixed(2)}%)です。${top.tip}` });
                 } else {
                     comments.push({ icon: '🔍', text: `「${top.label}」(${topVal.toFixed(2)}%)と「${top2.label}」(${top2Val.toFixed(2)}%)が主要ストレスです。複合的な管理改善が効果的です。` });
@@ -1534,16 +1489,27 @@
                 .map(c => `<li class="flex items-start gap-1.5"><span>${c.icon}</span><span>${c.text}</span></li>`)
                 .join('');
 
-            // ボタン切り替え: 一時停止時は「再開」を表示、終了時はCSVダウンロードを表示
-            const resumeBtn = document.getElementById('modal-resume-btn');
-            const csvBtn    = document.getElementById('modal-csv-btn');
-            const resetBtn  = document.getElementById('modal-reset-btn');
-            if (resumeBtn) resumeBtn.classList.toggle('hidden', !isPause);
-            if (csvBtn)    csvBtn.classList.remove('hidden'); // 一時停止時も常に表示
-            if (resetBtn)  resetBtn.textContent = isPause ? '🔄 リセット' : '🔄 新しいシミュレーション';
+            // パネル外観を結果分類で変える
+            const inner = document.getElementById('result-panel-inner');
+            const panelStyles = {
+                harvested: 'border-emerald-400 bg-emerald-50',
+                died:      'border-rose-400 bg-rose-50',
+                completed: 'border-sky-400 bg-sky-50',
+                paused:    'border-amber-400 bg-amber-50',
+            };
+            inner.className = `rounded-xl border-2 px-3 py-2 ${panelStyles[outcome] || ''}`;
 
-            if (isPause) addLog(`Day ${endDay} 一時停止 — 中間評価を表示中`, 'info');
-            document.getElementById('result-modal').classList.remove('hidden');
+            // 再開ボタンは一時停止時のみ表示
+            const resumeBtn = document.getElementById('res-resume-btn');
+            if (resumeBtn) resumeBtn.classList.toggle('hidden', !isPause);
+            const resetBtn = document.getElementById('res-reset-btn');
+            if (resetBtn) resetBtn.textContent = isPause ? '🔄 リセット' : '🔄 新しいシミュレーション';
+
+            if (isPause) addLog(`Day ${endDay} 一時停止。`, 'info');
+
+            // 結果パネルを表示して情報タブに切り替え
+            document.getElementById('result-panel').classList.remove('hidden');
+            switchTab('info');
         }
 
         function downloadCSV() {
@@ -1660,8 +1626,8 @@
         }
 
         function resetSim() {
-            // モーダルを閉じる
-            document.getElementById('result-modal').classList.add('hidden');
+            // 結果パネルを閉じる
+            document.getElementById('result-panel').classList.add('hidden');
 
             // ボタンを初期化
             const startBtn = document.getElementById('btn-start');
