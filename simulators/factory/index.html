@@ -215,6 +215,25 @@
             50%       { box-shadow: 0 0 0 5px rgba(168,85,247,0); }
         }
 
+        /* 環境タブ（天候 / タイマー） */
+        .env-tab-btn { padding: 3px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700;
+                       cursor: pointer; transition: background 0.15s, color 0.15s; border: none; }
+        .env-tab-btn.active   { background: #334155; color: #fff; }
+        .env-tab-btn.inactive { background: #f1f5f9; color: #64748b; }
+        .env-tab-btn.inactive:hover { background: #e2e8f0; }
+
+        /* LED スライダー */
+        #led-slider { accent-color: #f59e0b; cursor: pointer; flex: 1; }
+        #led-slider-label { font-size: 11px; font-weight: 700; color: #92400e;
+                            min-width: 64px; text-align: right; white-space: nowrap; }
+
+        /* タイマースロット行 */
+        .timer-slot-row { display: flex; align-items: center; gap: 4px;
+                          background: #f8fafc; border: 1px solid #e2e8f0;
+                          border-radius: 6px; padding: 4px 6px; margin-bottom: 4px; font-size: 11px; }
+        .timer-slot-row input[type="number"] { width: 40px; border: 1px solid #cbd5e1;
+                             border-radius: 4px; padding: 1px 4px; font-size: 11px; text-align:center; }
+
     </style>
 </head>
 <body class="p-2 bg-slate-100">
@@ -293,88 +312,84 @@
                         </div>
                     </div>
 
-                    <!-- 初期設定（開始前のみ表示） -->
-                    <div id="initial-settings">
-                        <div class="flex items-center justify-end mb-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-slate-500">月:</span>
-                                <select id="month-select" onchange="changeMonth(this.value)"
-                                        class="text-xs border border-slate-200 rounded px-2 py-1 bg-white">
-                                    <optgroup label="屋外">
-                                        <option value="outdoor_1">冬 1月 (屋外)</option>
-                                        <option value="outdoor_4" selected>春 4月 (屋外)</option>
-                                        <option value="outdoor_7">夏 7月 (屋外)</option>
-                                        <option value="outdoor_10">秋 10月 (屋外)</option>
-                                    </optgroup>
-                                    <optgroup label="屋内">
-                                        <option value="indoor_1">冬 1月 (屋内)</option>
-                                        <option value="indoor_4">春 4月 (屋内)</option>
-                                        <option value="indoor_7">夏 7月 (屋内)</option>
-                                        <option value="indoor_10">秋 10月 (屋内)</option>
-                                    </optgroup>
-                                </select>
+                    <!-- 環境設定タブ（常時表示） -->
+                    <div id="env-settings">
+                        <!-- タブバー -->
+                        <div class="flex items-center gap-2 mb-2">
+                            <button id="env-tab-weather" class="env-tab-btn active" onclick="switchEnvTab('weather')">🌤 天候</button>
+                            <button id="env-tab-timer"   class="env-tab-btn inactive" onclick="switchEnvTab('timer')">⏰ タイマー</button>
+                        </div>
+
+                        <!-- 天候パネル -->
+                        <div id="env-panel-weather">
+                            <div class="flex items-center justify-end mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-slate-500">月:</span>
+                                    <select id="month-select" onchange="changeMonth(this.value)"
+                                            class="text-xs border border-slate-200 rounded px-2 py-1 bg-white">
+                                        <optgroup label="屋外">
+                                            <option value="outdoor_1">冬 1月 (屋外)</option>
+                                            <option value="outdoor_4" selected>春 4月 (屋外)</option>
+                                            <option value="outdoor_7">夏 7月 (屋外)</option>
+                                            <option value="outdoor_10">秋 10月 (屋外)</option>
+                                        </optgroup>
+                                        <optgroup label="屋内">
+                                            <option value="indoor_1">冬 1月 (屋内)</option>
+                                            <option value="indoor_4">春 4月 (屋内)</option>
+                                            <option value="indoor_7">夏 7月 (屋内)</option>
+                                            <option value="indoor_10">秋 10月 (屋内)</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-xs mb-2">
+                                <div class="flex flex-col">
+                                    <label class="text-slate-500">日の出 (h)</label>
+                                    <input id="sunrise-input" type="number" min="0" max="23" value="6" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                                </div>
+                                <div class="flex flex-col">
+                                    <label class="text-slate-500">日の入り (h)</label>
+                                    <input id="sunset-input" type="number" min="0" max="23" value="18" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                                </div>
+                                <div class="flex flex-col">
+                                    <label class="text-slate-500">ピーク照度 (lx)</label>
+                                    <input id="peak-input" type="number" min="0" step="1000" value="50000" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                                </div>
+                                <div class="flex flex-col">
+                                    <label class="text-slate-500">最低気温 (°C)</label>
+                                    <input id="mintemp-input" type="number" min="-10" max="40" step="0.5" value="10.5" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                                </div>
+                                <div class="flex flex-col">
+                                    <label class="text-slate-500">最高気温 (°C)</label>
+                                    <input id="maxtemp-input" type="number" min="-10" max="50" step="0.5" value="19.5" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                                </div>
+                                <div class="flex flex-col">
+                                    <label class="text-slate-500">平均湿度 (%)</label>
+                                    <input id="hum-input" type="number" min="0" max="100" value="60" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+                                </div>
                             </div>
                         </div>
-                        <div class="grid grid-cols-3 gap-2 text-xs mb-2">
-                            <div class="flex flex-col">
-                                <label class="text-slate-500">日の出 (h)</label>
-                                <input id="sunrise-input" type="number" min="0" max="23" value="6" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
+
+                        <!-- タイマーパネル -->
+                        <div id="env-panel-timer" style="display:none">
+                            <div class="mb-1.5">
+                                <p class="text-[10px] text-slate-500 mb-1">LED ON/OFF スケジュール（LEDスライダーの光量を使用）</p>
+                                <div id="timer-list"></div>
+                                <button onclick="addTimerSlot()"
+                                        class="mt-1 w-full text-[11px] bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-1 rounded-lg border border-amber-300 transition">
+                                    ＋ スロット追加
+                                </button>
                             </div>
-                            <div class="flex flex-col">
-                                <label class="text-slate-500">日の入り (h)</label>
-                                <input id="sunset-input" type="number" min="0" max="23" value="18" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
-                            </div>
-                            <div class="flex flex-col">
-                                <label class="text-slate-500">ピーク照度 (lx)</label>
-                                <input id="peak-input" type="number" min="0" step="1000" value="50000" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
-                            </div>
-                            <div class="flex flex-col">
-                                <label class="text-slate-500">最低気温 (°C)</label>
-                                <input id="mintemp-input" type="number" min="-10" max="40" step="0.5" value="10.5" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
-                            </div>
-                            <div class="flex flex-col">
-                                <label class="text-slate-500">最高気温 (°C)</label>
-                                <input id="maxtemp-input" type="number" min="-10" max="50" step="0.5" value="19.5" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
-                            </div>
-                            <div class="flex flex-col">
-                                <label class="text-slate-500">平均湿度 (%)</label>
-                                <input id="hum-input" type="number" min="0" max="100" value="60" class="text-xs border rounded px-2 py-1 mt-1" onchange="updateSunSettings()" oninput="updateSunSettings()">
-                            </div>
+                            <p class="text-[10px] text-slate-400">※スロットがない場合は手動設定が維持されます。コードブロックが優先されます。</p>
                         </div>
                     </div>
 
-                    <!-- LED 光量 + 手動操作 -->
-                    <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                        <span class="text-[10px] font-bold text-yellow-800 shrink-0">💡</span>
-                        <select id="led-lux-select" class="text-[10px] border border-yellow-300 rounded px-1.5 py-0.5 bg-white text-yellow-900 font-mono shrink-0">
-                            <option value="1000">1,000 lx</option>
-                            <option value="2000">2,000 lx</option>
-                            <option value="3000">3,000 lx</option>
-                            <option value="4000">4,000 lx</option>
-                            <option value="5000">5,000 lx</option>
-                            <option value="6000">6,000 lx</option>
-                            <option value="7000">7,000 lx</option>
-                            <option value="8000" selected>8,000 lx</option>
-                            <option value="9000">9,000 lx</option>
-                            <option value="10000">10,000 lx</option>
-                            <option value="11000">11,000 lx</option>
-                            <option value="12000">12,000 lx</option>
-                            <option value="13000">13,000 lx</option>
-                            <option value="14000">14,000 lx</option>
-                            <option value="15000">15,000 lx</option>
-                        </select>
-                        <button id="btn-led-on" onclick="manualLED(true)"
-                                class="text-sm font-bold px-3 py-1.5 rounded-full border-2 border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 transition shrink-0">
-                            💡 ON
-                        </button>
-                        <button id="btn-led-off" onclick="manualLED(false)"
-                                class="text-sm font-bold px-3 py-1.5 rounded-full border-2 border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100 transition shrink-0">
-                            ⚫ OFF
-                        </button>
-                        <button class="hidden text-sm font-bold px-3 py-1.5 rounded-full border-2 border-sky-400 bg-sky-50 text-sky-700 hover:bg-sky-100 transition shrink-0"
-                                onclick="manualPump()">
-                            💧 ポンプ
-                        </button>
+                    <!-- LED 光量スライダー + 手動操作 -->
+                    <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <span class="text-[10px] font-bold text-yellow-800 shrink-0">💡 LED</span>
+                        <input type="range" id="led-slider" min="0" max="20000" step="1000" value="0"
+                               oninput="setLEDLux(parseInt(this.value))">
+                        <span id="led-slider-label">切</span>
                         <button onclick="manualAddWater()"
                                 class="text-sm font-bold px-3 py-1.5 rounded-full border-2 border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100 transition shrink-0">
                             🚰 足し水
@@ -926,25 +941,21 @@
         }
 
         // --- 手動操作 ---
-        function manualLED(on) {
-            if (on) {
-                const sel = document.getElementById('led-lux-select');
-                const lx = sel ? (parseInt(sel.value) || 8000) : 8000;
-                state.ledActive = true;
-                state.ledLux = lx;
-                state.light = state.sunLux + lx;
-                addLog(`手動: LED ON (${lx.toLocaleString()} lx)`, 'success');
-                pushCsvRow(`手動LED ON ${lx}lx`);
-            } else {
+        function setLEDLux(val) {
+            if (val === 0) {
                 state.ledActive = false;
-                state.light = state.sunLux;
-                addLog('手動: LED OFF', 'info');
-                pushCsvRow('手動LED OFF');
+            } else {
+                state.ledActive = true;
+                state.ledLux    = val;
             }
+            state.light = state.sunLux + (state.ledActive ? state.ledLux : 0);
+            const lbl = document.getElementById('led-slider-label');
+            if (lbl) lbl.textContent = val === 0 ? '切' : `${val.toLocaleString()} lx`;
+            pushCsvRow(val === 0 ? '手動LED OFF' : `手動LED ON ${val}lx`);
         }
+
         function manualPump() {
             state.ec = Math.min(3.0, state.ec + 0.1);
-            addLog('手動: ポンプ起動 (EC +0.1)', 'info');
             pushCsvRow('手動ポンプ起動 EC+0.1');
         }
         function manualAddWater() {
@@ -960,6 +971,63 @@
                 document.getElementById('panel-' + t).style.display = t === tab ? '' : 'none';
                 document.getElementById('tab-' + t).className = 'tab-btn ' + (t === tab ? 'active' : 'inactive');
             });
+        }
+
+        function switchEnvTab(tab) {
+            ['weather', 'timer'].forEach(t => {
+                document.getElementById('env-panel-' + t).style.display = t === tab ? '' : 'none';
+                document.getElementById('env-tab-' + t).className = 'env-tab-btn ' + (t === tab ? 'active' : 'inactive');
+            });
+        }
+
+        // --- タイマー管理 ---
+        function addTimerSlot(fromH, toH) {
+            const list = document.getElementById('timer-list');
+            const row = document.createElement('div');
+            row.className = 'timer-slot-row';
+            const f = (fromH !== undefined) ? fromH : 6;
+            const t = (toH   !== undefined) ? toH   : 20;
+            row.innerHTML =
+                `<span class="text-slate-500">ON</span>` +
+                `<input type="number" min="0" max="23" value="${f}" title="開始時刻(h)">` +
+                `<span class="text-slate-400">〜</span>` +
+                `<input type="number" min="0" max="23" value="${t}" title="終了時刻(h)">` +
+                `<span class="text-slate-500">時</span>` +
+                `<button onclick="removeTimerSlot(this)"
+                         class="ml-auto text-[10px] text-slate-400 hover:text-red-500 font-bold leading-none px-1">✕</button>`;
+            list.appendChild(row);
+        }
+
+        function removeTimerSlot(btn) {
+            btn.closest('.timer-slot-row').remove();
+        }
+
+        function getTimerSlots() {
+            const rows = document.querySelectorAll('#timer-list .timer-slot-row');
+            const slots = [];
+            rows.forEach(row => {
+                const inputs = row.querySelectorAll('input[type="number"]');
+                const from = parseInt(inputs[0].value, 10);
+                const to   = parseInt(inputs[1].value, 10);
+                if (!isNaN(from) && !isNaN(to)) slots.push({ from, to });
+            });
+            return slots;
+        }
+
+        function applyTimerSchedule(hour) {
+            const slots = getTimerSlots();
+            if (slots.length === 0) return; // スロットなし → 手動状態維持
+            const inRange = slots.some(s => {
+                if (s.from <= s.to) return hour >= s.from && hour < s.to;
+                // 日跨ぎ (例: 22〜6)
+                return hour >= s.from || hour < s.to;
+            });
+            if (inRange) {
+                state.ledActive = true;
+                // ledLux は state.ledLux のまま（スライダーと共用）
+            } else {
+                state.ledActive = false;
+            }
         }
 
         function switchInfoTab(sub) {
@@ -1215,7 +1283,10 @@
                     // EC の自然減少
                     state.ec = Math.max(0, state.ec - 0.001);
 
-                    // 制御ブロックを毎時間実行（ブロックがなければLED状態はそのまま維持）
+                    // タイマースケジュールを適用（スロットがあれば時刻に応じてLED ON/OFF）
+                    applyTimerSchedule(w.hour);
+
+                    // 制御ブロックを毎時間実行（ブロックがあればタイマー設定を上書き）
                     const rootBlocks = document.getElementById('workspace').children;
                     if (rootBlocks.length > 0) {
                         executeBlockList(rootBlocks);
@@ -1436,18 +1507,13 @@
             const ledGlow = document.getElementById('led-glow');
             if (ledGlow) ledGlow.style.opacity = state.ledActive ? '1' : '0';
 
-            // --- LED ON/OFF ボタンのハイライト (現在のLED状態を反映) ---
-            const btnLedOn  = document.getElementById('btn-led-on');
-            const btnLedOff = document.getElementById('btn-led-off');
-            if (btnLedOn && btnLedOff) {
-                const base = 'text-sm font-bold px-3 py-1.5 rounded-full border-2 transition shrink-0';
-                if (state.ledActive) {
-                    btnLedOn.className  = `${base} border-yellow-500 bg-yellow-300 text-yellow-900 ring-2 ring-yellow-500 shadow-md`;
-                    btnLedOff.className = `${base} border-slate-300 bg-slate-50 text-slate-400 hover:bg-slate-100`;
-                } else {
-                    btnLedOn.className  = `${base} border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100`;
-                    btnLedOff.className = `${base} border-slate-500 bg-slate-300 text-slate-800 ring-2 ring-slate-500 shadow-md`;
-                }
+            // --- LED スライダー同期（現在のLED状態を反映） ---
+            const ledSlider = document.getElementById('led-slider');
+            const ledLabel  = document.getElementById('led-slider-label');
+            if (ledSlider && ledLabel) {
+                const displayLux = state.ledActive ? state.ledLux : 0;
+                if (parseInt(ledSlider.value) !== displayLux) ledSlider.value = displayLux;
+                ledLabel.textContent = displayLux === 0 ? '切' : `${displayLux.toLocaleString()} lx`;
             }
 
             // --- センサーグリッド（経過日数・成長率・ダメージ・電気代）---
@@ -1526,7 +1592,6 @@
             startBtn.dataset.mode = 'reset';
             startBtn.className = 'shrink-0 bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition';
             startBtn.textContent = '⏹ 停止';
-            document.getElementById('initial-settings').style.display = 'none';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = false;
             pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-full text-base transition';
@@ -1655,6 +1720,14 @@
             simAccum     = 0;
             scrubIndex   = -1;
 
+            // 現在の sunSettings で天候データを再生成（天候タブの設定変更を反映）
+            {
+                const monthSel = document.getElementById('month-select');
+                const _key = monthSel ? (monthSel.value || 'outdoor_4') : 'outdoor_4';
+                const _monthNum = (MONTH_DEFAULTS[_key] || MONTH_DEFAULTS['outdoor_4']).month;
+                weatherData = weather.generateMonthData(_monthNum, sunSettings);
+            }
+
             const bar = document.getElementById('timeline-branch-bar');
             if (bar) bar.classList.add('hidden');
 
@@ -1675,7 +1748,6 @@
                 sb.dataset.mode = 'reset';
                 sb.className    = 'shrink-0 bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition';
                 sb.textContent  = '⏹ 停止';
-                document.getElementById('initial-settings').style.display = 'none';
             }
 
             resetResult();
@@ -1956,7 +2028,6 @@
             startBtn.dataset.mode = 'start';
             startBtn.className = 'shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition';
             startBtn.textContent = '▶︎ 開始';
-            document.getElementById('initial-settings').style.display = '';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = true;
             pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-slate-300 text-slate-500 font-bold rounded-full text-base transition cursor-not-allowed';
@@ -1996,9 +2067,12 @@
 
         window.onload = () => {
             // 初期UI値を sunSettings（4月デフォルト）に合わせる
-            document.getElementById('sunrise-input').value = sunSettings.sunrise;
-            document.getElementById('sunset-input').value  = sunSettings.sunset;
-            document.getElementById('peak-input').value    = sunSettings.peakLux;
+            document.getElementById('sunrise-input').value  = sunSettings.sunrise;
+            document.getElementById('sunset-input').value   = sunSettings.sunset;
+            document.getElementById('peak-input').value     = sunSettings.peakLux;
+            document.getElementById('mintemp-input').value  = sunSettings.minT;
+            document.getElementById('maxtemp-input').value  = sunSettings.maxT;
+            document.getElementById('hum-input').value      = sunSettings.hum;
 
             initWeather(4);
             initMainChart();
