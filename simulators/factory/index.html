@@ -1188,7 +1188,15 @@
 
         // --- タイムライン巻き戻し ---
         function scrubSim(idx) {
-            if (snapshots.length === 0 || idx < 0 || idx >= snapshots.length) return;
+            if (snapshots.length === 0) return;
+            // スナップショット未到達の未来には移動させない
+            const maxIdx = snapshots.length - 1;
+            if (idx > maxIdx) {
+                idx = maxIdx;
+                const sl = document.getElementById('timeline-slider');
+                if (sl) sl.value = maxIdx;
+            }
+            if (idx < 0) return;
             scrubIndex = idx;
             const snap = snapshots[idx];
 
@@ -1325,13 +1333,16 @@
             }
         }
 
+        const TIMELINE_DEFAULT_HOURS = 20 * 24; // デフォルト表示幅: 20日分
+
         function updateTimelineSlider() {
             const section = document.getElementById('timeline-section');
             const slider  = document.getElementById('timeline-slider');
             if (!section || !slider) return;
             const hasData = snapshots.length > 0;
             if (!hasData) return;
-            slider.max = snapshots.length - 1;
+            // 20日(480h)を下限とし、実際のスナップショット数がそれを超えたら伸ばす
+            slider.max = Math.max(TIMELINE_DEFAULT_HOURS, snapshots.length - 1);
             if (scrubIndex < 0) {
                 // ライブモード: スライダーを最後尾に追従
                 slider.value = snapshots.length - 1;

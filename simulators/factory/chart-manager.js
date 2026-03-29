@@ -173,8 +173,8 @@ function initMainChart() {
 // --- 描画（毎フレーム呼ぶ） ---
 function drawCharts() {
     if (!mainChart) { initMainChart(); if (!mainChart) return; }
-    // scrubIndex >= 0 の場合はその時点までのデータのみ表示
-    const n = scrubIndex >= 0 ? scrubIndex + 1 : chartData.temp.length;
+    // チャートは常に蓄積済み全データを表示する（スクラブ位置に関係なく）
+    const n = chartData.temp.length;
     if (n === 0) return;
 
     mainChart.data.labels = Array.from({ length: n }, (_, i) => i);
@@ -185,5 +185,66 @@ function drawCharts() {
     mainChart.data.datasets[4].data = chartData.damage.slice(0, n);
     // 光量軸の max を動的に更新
     mainChart.options.scales.yLight.max = (sunSettings.peakLux + 15000) / 1000;
+    // スクラブマーカー位置を更新
+    mainChart._scrubMarkerIndex = (scrubIndex >= 0 && scrubIndex < n) ? scrubIndex : -1;
     mainChart.update('none');
 }
+
+// --- スクラブマーカー カスタムプラグイン ---
+const scrubMarkerPlugin = {
+    id: 'scrubMarker',
+    afterDraw(chart) {
+        const idx = chart._scrubMarkerIndex;
+        if (idx == null || idx < 0) return;
+        const meta = chart.getDatasetMeta(0);
+        if (!meta || !meta.data || !meta.data[idx]) return;
+
+        const x   = meta.data[idx].x;
+        const top = chart.chartArea.top;
+        const bot = chart.chartArea.bottom;
+        const ctx = chart.ctx;
+
+        // 縦線
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([5, 4]);
+        ctx.strokeStyle = 'rgba(168, 85, 247, 0.85)'; // purple-500
+        ctx.lineWidth   = 1.5;
+        ctx.moveTo(x, top);
+        ctx.lineTo(x, bot);
+        ctx.stroke();
+
+        // ラベル（weatherData から Day/Hour を取得）
+        const snapIdx = idx < (typeof snapshots !== 'undefined' ? snapshots.length : 0)
+            ? snapshots[idx]?.weatherIndex ?? -1
+            : -1;
+        const w = (snapIdx >= 0 && snapIdx < weatherData.length) ? weatherData[snapIdx] : null;
+        const label = w ? `Day${w.day} ${String(w.hour).padStart(2,'0')}:00` : `#${idx}`;
+
+        const pad = 4;
+        ctx.font         = 'bold 10px sans-serif';
+        ctx.textBaseline = 'top';
+        const tw = ctx.measureText(label).width;
+        // ラベルボックスをチャート内に収める
+        const lx = (x + pad + tw + 4 > chart.chartArea.right) ? x - tw - pad * 2 - 4 : x + pad;
+        ctx.fillStyle = 'rgba(168, 85, 247, 0.88)';
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(lx, top + 2, tw + pad * 2, 16, 3);
+        } else {
+            ctx.rect(lx, top + 2, tw + pad * 2, 16);
+        }
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.fillText(label, lx + pad, top + 4);
+
+        // 円マーカー（線上の上端）
+        ctx.beginPath();
+        ctx.arc(x, top, 5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(168, 85, 247, 0.9)';
+        ctx.fill();
+        ctx.restore();
+    }
+};
+
+Chart.register(scrubMarkerPlugin);
