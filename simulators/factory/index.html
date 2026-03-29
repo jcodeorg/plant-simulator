@@ -1949,12 +1949,18 @@
             document.getElementById('maxtemp-input').value  = sunSettings.maxT;
             document.getElementById('hum-input').value      = sunSettings.hum;
 
-            // シミュレータをフルリセットして新しい天候データで再生成
-            resetSim();
+            // 天候データのみ再生成（weatherIndex は保持）。一時停止状態にする。
             weatherData = weather.generateMonthData(defaults.month, sunSettings);
-            const sel = document.getElementById('month-select');
-            const label = sel.options[sel.selectedIndex].text;
-            addLog(`${label}のデータでシミュレーターを再起動しました（日の出 ${sunSettings.sunrise}時 / 日の入り ${sunSettings.sunset}時 / ピーク ${sunSettings.peakLux.toLocaleString()}lx）`, "success");
+            if (!simPaused) {
+                simPaused = true;
+                setStatusBadge(false);
+                const pauseBtn = document.getElementById('btn-pause');
+                if (pauseBtn && !pauseBtn.disabled) {
+                    pauseBtn.textContent = '▶';
+                    pauseBtn.className   = 'w-9 h-9 flex items-center justify-center bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-full text-base transition';
+                    pauseBtn.onclick     = togglePause;
+                }
+            }
         }
 
         function initWeather(month) {
