@@ -1298,6 +1298,9 @@
                     // 総合光量 = 太陽光 + LED
                     state.light = state.sunLux + (state.ledActive ? state.ledLux : 0);
 
+                    // スナップショットを記録（シミュレータ更新前：天候・タイマー・コード適用済みの状態）
+                    saveSnapshot();
+
                     // PlantSimulator で1時間分更新 (dt=1.0)
                     const simStatus = lettuce.update(state.temp, state.humid, state.light, 1.0, w.hour);
                     state.growth     = simStatus.growth * 100;
@@ -1345,7 +1348,6 @@
                     weatherIndex++;
                     // 1シミュレーション時間ごとに1点だけ記録（速度に依存しない）
                     pushChartData();
-                    saveSnapshot();
                 }
 
                 // シミュレーション時計を更新
