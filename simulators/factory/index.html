@@ -288,7 +288,7 @@
                     <div class="flex gap-2 mb-2 items-center">
                         <button id="btn-start" onclick="startOrReset()" data-mode="start"
                                 class="shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition">
-                            ▶︎ 開始
+                            ▶︎ スタート
                         </button>
                         <div class="flex-1 min-w-0 text-center">
                             <span id="ctrl-clock" class="text-2xl font-mono font-bold text-slate-800 tracking-wide">Day 1 - 00:00</span>
@@ -454,32 +454,32 @@
                     <div id="ctrl-status-panel" class="mb-2">
                         <div class="flex gap-1 flex-wrap">
                             <div class="flex-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 text-center min-w-0">
-                                <p class="text-[8px] text-blue-600 font-bold leading-tight">気温</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-temp">—</span>°C</p>
+                                <p class="text-[11px] text-blue-600 font-bold leading-tight">気温</p>
+                                <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-temp">—</span>°C</p>
                             </div>
                             <div class="flex-1 bg-sky-50 px-2 py-1 rounded-lg border border-sky-100 text-center min-w-0">
-                                <p class="text-[8px] text-sky-600 font-bold leading-tight">湿度</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-humid">—</span>%</p>
+                                <p class="text-[11px] text-sky-600 font-bold leading-tight">湿度</p>
+                                <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-humid">—</span>%</p>
                             </div>
                             <div class="flex-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100 text-center min-w-0">
-                                <p class="text-[8px] text-yellow-600 font-bold leading-tight">太陽光</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light">—</span><small>lx</small></p>
+                                <p class="text-[11px] text-yellow-600 font-bold leading-tight">太陽光</p>
+                                <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light">—</span><small>lx</small></p>
                             </div>
                             <div class="flex-1 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 text-center min-w-0">
-                                <p class="text-[8px] text-amber-600 font-bold leading-tight">出力光</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light-total">—</span><small>lx</small></p>
+                                <p class="text-[11px] text-amber-600 font-bold leading-tight">出力光</p>
+                                <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light-total">—</span><small>lx</small></p>
                             </div>
                             <div class="flex-1 bg-teal-50 px-2 py-1 rounded-lg border border-teal-100 text-center min-w-0">
-                                <p class="text-[8px] text-teal-600 font-bold leading-tight">水位</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-water">—</span><small>cm</small></p>
+                                <p class="text-[11px] text-teal-600 font-bold leading-tight whitespace-nowrap">水位<span class="text-[9px] font-normal">(推奨5cm)</span></p>
+                                <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-water">—</span><small>cm</small></p>
                             </div>
                             <div class="flex-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-center min-w-0">
-                                <p class="text-[8px] text-slate-500 font-bold leading-tight">経過日数</p>
-                                <p class="text-xs font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-elapsed">—</span><small>日</small></p>
+                                <p class="text-[11px] text-slate-500 font-bold leading-tight">経過日数</p>
+                                <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-elapsed">—</span><small>日</small></p>
                             </div>
                             <div class="flex-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100 text-center min-w-0">
-                                <p class="text-[8px] text-yellow-700 font-bold leading-tight">電気代</p>
-                                <p class="text-xs font-bold text-yellow-800 whitespace-nowrap"><span id="ctrl-electric">—</span><small>円</small></p>
+                                <p class="text-[11px] text-yellow-700 font-bold leading-tight">電気代</p>
+                                <p class="text-sm font-bold text-yellow-800 whitespace-nowrap"><span id="ctrl-electric">—</span><small>円</small></p>
                             </div>
                         </div>
                     </div>
@@ -1588,7 +1588,7 @@
             const startBtn = document.getElementById('btn-start');
             startBtn.dataset.mode = 'reset';
             startBtn.className = 'shrink-0 bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition';
-            startBtn.textContent = '⏹ 停止';
+            startBtn.textContent = '⏹ リセット';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = false;
             pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-full text-base transition';
@@ -1744,7 +1744,7 @@
             if (sb) {
                 sb.dataset.mode = 'reset';
                 sb.className    = 'shrink-0 bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition';
-                sb.textContent  = '⏹ 停止';
+                sb.textContent  = '⏹ リセット';
             }
 
             resetResult();
@@ -2024,7 +2024,7 @@
             const startBtn = document.getElementById('btn-start');
             startBtn.dataset.mode = 'start';
             startBtn.className = 'shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition';
-            startBtn.textContent = '▶︎ 開始';
+            startBtn.textContent = '▶︎ スタート';
             const pauseBtn = document.getElementById('btn-pause');
             pauseBtn.disabled = true;
             pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-slate-300 text-slate-500 font-bold rounded-full text-base transition cursor-not-allowed';
