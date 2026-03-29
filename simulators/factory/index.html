@@ -1443,18 +1443,35 @@
         }
 
         function downloadCSV() {
-            if (csvLog.length === 0) {
+            if (snapshots.length === 0) {
                 addLog('記録データがありません。シミュレーション実行後にダウンロードできます。', 'error');
                 return;
             }
-            const headers = ['Day','Hour','気温(°C)','湿度(%)','光量(lx)','EC',
-                             '成長率(%)','ダメージ(%)','徒長(%)','水位(cm)',
-                             'LED','ステージ','イベント'];
-            const rows = csvLog.map(r =>
-                [r.day, r.hour, r.temp, r.humid, r.light, r.ec,
-                 r.growth, r.damage, r.etiolation, r.waterLevel,
-                 r.led, r.stage, r.event]
-            );
+            const headers = ['Day','Hour','気温(°C)','湿度(%)','太陽光(lx)','光量合計(lx)','EC',
+                             '成長率(%)','ダメージ(%)','徒長(%)','水位(cm)','LED','LED光量(lx)','ステージ'];
+            const rows = snapshots.map(snap => {
+                const wi = Math.min(snap.weatherIndex, weatherData.length - 1);
+                const w  = weatherData[wi];
+                const u  = snap.uiState;
+                const ledStr = u.ledActive ? 'ON' : 'OFF';
+                const light  = (w?.lux ?? 0) + (u.ledActive ? u.ledLux : 0);
+                return [
+                    w?.day  ?? '',
+                    w?.hour ?? '',
+                    w?.temp?.toFixed(1)     ?? '',
+                    w?.humidity?.toFixed(1) ?? '',
+                    w?.lux  ?? '',
+                    light,
+                    u.ec.toFixed(2),
+                    u.growth.toFixed(1),
+                    (u.damage * 100).toFixed(1),
+                    (u.etiolation * 100).toFixed(1),
+                    u.waterLevel.toFixed(2),
+                    ledStr,
+                    u.ledActive ? u.ledLux : 0,
+                    u.stageName,
+                ];
+            });
             const csvContent = [headers, ...rows]
                 .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
                 .join('\r\n');
