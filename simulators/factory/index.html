@@ -223,9 +223,7 @@
         .env-tab-btn.inactive:hover { background: #e2e8f0; }
 
         /* LED スライダー */
-        #led-slider { accent-color: #f59e0b; cursor: pointer; flex: 1; }
-        #led-slider-label { font-size: 11px; font-weight: 700; color: #92400e;
-                            min-width: 64px; text-align: right; white-space: nowrap; }
+        #led-slider { accent-color: #f59e0b; cursor: pointer; }
 
         /* タイマースロット行 */
         .timer-slot-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
@@ -407,13 +405,14 @@
                     </div>
 
                     <!-- LED 光量スライダー + 手動操作 -->
-                    <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <div class="flex items-center gap-2 mt-1.5">
                         <span class="text-[10px] font-bold text-yellow-800 shrink-0">💡 LED</span>
                         <input type="range" id="led-slider" min="0" max="20000" step="1000" value="0"
+                               style="width:38%; accent-color:#f59e0b"
                                oninput="setLEDLux(parseInt(this.value))">
-                        <span id="led-slider-label">切</span>
+                        <span id="led-slider-label" class="text-[11px] font-bold text-amber-700 shrink-0" style="min-width:56px">切</span>
                         <button onclick="manualAddWater()"
-                                class="text-sm font-bold px-3 py-1.5 rounded-full border-2 border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100 transition shrink-0">
+                                class="text-sm font-bold px-3 py-1.5 rounded-full border-2 border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100 transition shrink-0 ml-auto">
                             🚰 足し水
                         </button>
                     </div>
