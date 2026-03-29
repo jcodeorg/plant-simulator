@@ -231,7 +231,7 @@
         .timer-slot-row { display: flex; align-items: center; gap: 4px;
                           background: #f8fafc; border: 1px solid #e2e8f0;
                           border-radius: 6px; padding: 4px 6px; margin-bottom: 4px; font-size: 11px; }
-        .timer-slot-row input[type="number"] { width: 40px; border: 1px solid #cbd5e1;
+        .timer-slot-row input[type="number"] { border: 1px solid #cbd5e1;
                              border-radius: 4px; padding: 1px 4px; font-size: 11px; text-align:center; }
 
     </style>
@@ -373,7 +373,7 @@
                         <!-- タイマーパネル -->
                         <div id="env-panel-timer" style="display:none">
                             <div class="mb-1.5">
-                                <p class="text-[10px] text-slate-500 mb-1">LED ON/OFF スケジュール（LEDスライダーの光量を使用）</p>
+                                <p class="text-[10px] text-slate-500 mb-1">1スロット＝1動作：指定時刻にLEDを設定光量へ切り替えます（0 lx＝消灯）</p>
                                 <div id="timer-list"></div>
                                 <button onclick="addTimerSlot()"
                                         class="mt-1 w-full text-[11px] bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-1 rounded-lg border border-amber-300 transition">
@@ -981,18 +981,17 @@
         }
 
         // --- タイマー管理 ---
-        function addTimerSlot(fromH, toH) {
+        function addTimerSlot(h, lx) {
             const list = document.getElementById('timer-list');
             const row = document.createElement('div');
             row.className = 'timer-slot-row';
-            const f = (fromH !== undefined) ? fromH : 6;
-            const t = (toH   !== undefined) ? toH   : 20;
+            const hr = (h  !== undefined) ? h  : 6;
+            const lv = (lx !== undefined) ? lx : 8000;
             row.innerHTML =
-                `<span class="text-slate-500">ON</span>` +
-                `<input type="number" min="0" max="23" value="${f}" title="開始時刻(h)">` +
-                `<span class="text-slate-400">〜</span>` +
-                `<input type="number" min="0" max="23" value="${t}" title="終了時刻(h)">` +
-                `<span class="text-slate-500">時</span>` +
+                `<input type="number" min="0" max="23" value="${hr}" title="時刻(h)" style="width:36px">` +
+                `<span class="text-slate-400 text-[10px]">時 →</span>` +
+                `<input type="number" min="0" max="20000" step="1000" value="${lv}" title="光量 lx（0＝消灯）" style="width:58px">` +
+                `<span class="text-slate-500 text-[10px]">lx</span>` +
                 `<button onclick="removeTimerSlot(this)"
                          class="ml-auto text-[10px] text-slate-400 hover:text-red-500 font-bold leading-none px-1">✕</button>`;
             list.appendChild(row);
@@ -1007,9 +1006,9 @@
             const slots = [];
             rows.forEach(row => {
                 const inputs = row.querySelectorAll('input[type="number"]');
-                const from = parseInt(inputs[0].value, 10);
-                const to   = parseInt(inputs[1].value, 10);
-                if (!isNaN(from) && !isNaN(to)) slots.push({ from, to });
+                const hour = parseInt(inputs[0].value, 10);
+                const lux  = parseInt(inputs[1].value, 10);
+                if (!isNaN(hour) && !isNaN(lux)) slots.push({ hour, lux });
             });
             return slots;
         }
@@ -1017,16 +1016,14 @@
         function applyTimerSchedule(hour) {
             const slots = getTimerSlots();
             if (slots.length === 0) return; // スロットなし → 手動状態維持
-            const inRange = slots.some(s => {
-                if (s.from <= s.to) return hour >= s.from && hour < s.to;
-                // 日跨ぎ (例: 22〜6)
-                return hour >= s.from || hour < s.to;
-            });
-            if (inRange) {
-                state.ledActive = true;
-                // ledLux は state.ledLux のまま（スライダーと共用）
-            } else {
+            // 現在の時刻に一致するスロットを探して実行
+            const match = slots.find(s => s.hour === hour);
+            if (!match) return;
+            if (match.lux === 0) {
                 state.ledActive = false;
+            } else {
+                state.ledActive = true;
+                state.ledLux    = match.lux;
             }
         }
 
