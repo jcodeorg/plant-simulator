@@ -228,9 +228,9 @@
                             min-width: 64px; text-align: right; white-space: nowrap; }
 
         /* タイマースロット行 */
-        .timer-slot-row { display: flex; align-items: center; gap: 4px;
+        .timer-slot-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
                           background: #f8fafc; border: 1px solid #e2e8f0;
-                          border-radius: 6px; padding: 4px 6px; margin-bottom: 4px; font-size: 11px; }
+                          border-radius: 6px; padding: 6px 8px; margin-bottom: 4px; font-size: 11px; }
         .timer-slot-row input[type="number"] { border: 1px solid #cbd5e1;
                              border-radius: 4px; padding: 1px 4px; font-size: 11px; text-align:center; }
 
@@ -372,15 +372,37 @@
 
                         <!-- タイマーパネル -->
                         <div id="env-panel-timer" style="display:none">
-                            <div class="mb-1.5">
-                                <p class="text-[10px] text-slate-500 mb-1">1スロット＝1動作：指定時刻にLEDを設定光量へ切り替えます（0 lx＝消灯）</p>
-                                <div id="timer-list"></div>
-                                <button onclick="addTimerSlot()"
-                                        class="mt-1 w-full text-[11px] bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-1 rounded-lg border border-amber-300 transition">
-                                    ＋ スロット追加
-                                </button>
+                            <p class="text-[10px] text-slate-500 mb-2">指定時刻にLEDを切り替えます。無効のスロットは無視されます。コードブロックが優先されます。</p>
+                            <!-- スロット1 -->
+                            <div id="timer1-row" class="timer-slot-row">
+                                <label class="flex items-center gap-1 cursor-pointer shrink-0">
+                                    <input type="checkbox" id="timer1-enabled" class="accent-amber-500"
+                                           onchange="updateTimerRowOpacity(1)">
+                                    <span class="text-[11px] font-bold text-slate-600">1</span>
+                                </label>
+                                <input type="number" id="timer1-hour" min="0" max="23" value="6"
+                                       style="width:38px" class="text-[11px]" title="時刻(h)">
+                                <span class="text-[10px] text-slate-400 shrink-0">時</span>
+                                <input type="range" id="timer1-lux" min="0" max="20000" step="1000" value="8000"
+                                       style="width:38%; accent-color:#f59e0b"
+                                       oninput="document.getElementById('timer1-label').textContent = this.value==0?'切':parseInt(this.value).toLocaleString()+' lx'">
+                                <span id="timer1-label" class="text-[11px] font-bold text-amber-700 shrink-0">8,000 lx</span>
                             </div>
-                            <p class="text-[10px] text-slate-400">※スロットがない場合は手動設定が維持されます。コードブロックが優先されます。</p>
+                            <!-- スロット2 -->
+                            <div id="timer2-row" class="timer-slot-row mt-1.5">
+                                <label class="flex items-center gap-1 cursor-pointer shrink-0">
+                                    <input type="checkbox" id="timer2-enabled" class="accent-amber-500"
+                                           onchange="updateTimerRowOpacity(2)">
+                                    <span class="text-[11px] font-bold text-slate-600">2</span>
+                                </label>
+                                <input type="number" id="timer2-hour" min="0" max="23" value="20"
+                                       style="width:38px" class="text-[11px]" title="時刻(h)">
+                                <span class="text-[10px] text-slate-400 shrink-0">時</span>
+                                <input type="range" id="timer2-lux" min="0" max="20000" step="1000" value="0"
+                                       style="width:38%; accent-color:#f59e0b"
+                                       oninput="document.getElementById('timer2-label').textContent = this.value==0?'切':parseInt(this.value).toLocaleString()+' lx'">
+                                <span id="timer2-label" class="text-[11px] font-bold text-amber-700 shrink-0">切</span>
+                            </div>
                         </div>
                     </div>
 
@@ -981,42 +1003,27 @@
         }
 
         // --- タイマー管理 ---
-        function addTimerSlot(h, lx) {
-            const list = document.getElementById('timer-list');
-            const row = document.createElement('div');
-            row.className = 'timer-slot-row';
-            const hr = (h  !== undefined) ? h  : 6;
-            const lv = (lx !== undefined) ? lx : 8000;
-            row.innerHTML =
-                `<input type="number" min="0" max="23" value="${hr}" title="時刻(h)" style="width:36px">` +
-                `<span class="text-slate-400 text-[10px]">時 →</span>` +
-                `<input type="number" min="0" max="20000" step="1000" value="${lv}" title="光量 lx（0＝消灯）" style="width:58px">` +
-                `<span class="text-slate-500 text-[10px]">lx</span>` +
-                `<button onclick="removeTimerSlot(this)"
-                         class="ml-auto text-[10px] text-slate-400 hover:text-red-500 font-bold leading-none px-1">✕</button>`;
-            list.appendChild(row);
-        }
-
-        function removeTimerSlot(btn) {
-            btn.closest('.timer-slot-row').remove();
+        function updateTimerRowOpacity(n) {
+            const enabled = document.getElementById(`timer${n}-enabled`).checked;
+            const row = document.getElementById(`timer${n}-row`);
+            if (row) row.style.opacity = enabled ? '1' : '0.35';
         }
 
         function getTimerSlots() {
-            const rows = document.querySelectorAll('#timer-list .timer-slot-row');
             const slots = [];
-            rows.forEach(row => {
-                const inputs = row.querySelectorAll('input[type="number"]');
-                const hour = parseInt(inputs[0].value, 10);
-                const lux  = parseInt(inputs[1].value, 10);
+            for (let i = 1; i <= 2; i++) {
+                const enabled = document.getElementById(`timer${i}-enabled`)?.checked;
+                if (!enabled) continue;
+                const hour = parseInt(document.getElementById(`timer${i}-hour`).value, 10);
+                const lux  = parseInt(document.getElementById(`timer${i}-lux`).value, 10);
                 if (!isNaN(hour) && !isNaN(lux)) slots.push({ hour, lux });
-            });
+            }
             return slots;
         }
 
         function applyTimerSchedule(hour) {
             const slots = getTimerSlots();
-            if (slots.length === 0) return; // スロットなし → 手動状態維持
-            // 現在の時刻に一致するスロットを探して実行
+            if (slots.length === 0) return; // 有効スロットなし → 手動状態維持
             const match = slots.find(s => s.hour === hour);
             if (!match) return;
             if (match.lux === 0) {
@@ -2079,6 +2086,8 @@
 
             initWeather(4);
             initMainChart();
+            updateTimerRowOpacity(1);
+            updateTimerRowOpacity(2);
             addLog("Smart Farm OS initialized.");
             addLog("PlantSimulator (サニーレタス) 読み込み完了。", "success");
             addLog("WeatherGenerator (東京・4月 45日分) 読み込み完了。", "success");
