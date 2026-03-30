@@ -718,9 +718,7 @@
 
         // --- タイマー管理 ---
         function updateTimerRowOpacity(n) {
-            const enabled = document.getElementById(`timer${n}-enabled`).checked;
-            const row = document.getElementById(`timer${n}-row`);
-            if (row) row.style.opacity = enabled ? '1' : '0.35';
+            // 有効／無効に関わらず常に通常表示
         }
 
         function getTimerSlots() {
