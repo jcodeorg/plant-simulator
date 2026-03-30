@@ -87,6 +87,7 @@
         }
 
         .drop-zone { min-height: 300px; border: 2px dashed #cbd5e1; border-radius: 8px; background: white; }
+        .logic-dim { opacity: 0.4; }
         
         /* 植物ショーケース */
         .showcase {
@@ -544,6 +545,15 @@
 
                 <!-- コードタブ -->
                 <div id="panel-code" style="display:none">
+                    <!-- 表示言語切替（上部） -->
+                    <div class="flex gap-1.5 mb-2 items-center">
+                        <div class="flex rounded-full overflow-hidden border border-slate-300 text-[11px] shrink-0">
+                            <button id="btn-lang-py" onclick="setBlockLang('python')"
+                                class="px-3 py-1 bg-indigo-500 text-white font-bold">🐍 Python</button>
+                            <button id="btn-lang-kt" onclick="setBlockLang('kitaratchi')"
+                                class="px-3 py-1 bg-white text-slate-500 font-bold">🟦 きたらっち</button>
+                        </div>
+                    </div>
                     <div class="grid grid-cols-12 gap-3">
                         <div class="col-span-5 bg-slate-50 p-2 rounded-xl border border-slate-200 block-container">
                             <p class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Code Blocks</p>
@@ -553,11 +563,11 @@
                                 <div class="delete-btn" title="Delete block">✕</div>
                                 <div class="p-1.5 bg-orange-500 flex flex-col gap-1 pr-8">
                                     <div class="flex items-center gap-1 flex-wrap">
-                                        <span class="py-keyword">if</span>
+                                        <span class="py-keyword block-kw" data-py="if" data-kt="もし">if</span>
                                         <select class="block-input sensor-select">
-                                            <option value="light">light</option>
+                                            <option value="sun_lx">sun_lx</option>
                                             <option value="temp">temp</option>
-                                            <option value="water">water</option>
+                                            <option value="water.cm">water.cm</option>
                                             <option value="hour">hour</option>
                                             <option value="day">day</option>
                                         </select>
@@ -568,31 +578,31 @@
                                         </select>
                                         <input type="number" class="block-input value-input" value="5000" step="100">
                                     </div>
-                                    <div class="flex items-center gap-1.5 flex-wrap logic-row" style="opacity:0.4">
-                                        <select class="block-input logic-select" style="width:54px" onchange="updateLogicRow(this)">
+                                    <div class="flex items-center gap-1.5 flex-wrap logic-row">
+                                        <select class="block-input logic-select logic-dim" style="width:54px" onchange="updateLogicRow(this)">
                                             <option value="none">--</option>
                                             <option value="and">and</option>
                                             <option value="or">or</option>
                                         </select>
-                                        <select class="block-input sensor-select2">
-                                            <option value="light">light</option>
+                                        <select class="block-input sensor-select2 logic-dim">
+                                            <option value="sun_lx">sun_lx</option>
                                             <option value="temp">temp</option>
-                                            <option value="water">water</option>
+                                            <option value="water.cm">water.cm</option>
                                             <option value="hour">hour</option>
                                             <option value="day">day</option>
                                         </select>
-                                        <select class="block-input operator-select2">
+                                        <select class="block-input operator-select2 logic-dim">
                                             <option value="lt">&lt;</option>
                                             <option value="gt">&gt;</option>
                                             <option value="eq">==</option>
                                         </select>
-                                        <input type="number" class="block-input value-input2" value="20" step="1">
-                                        <span class="py-keyword">:</span>
+                                        <input type="number" class="block-input value-input2 logic-dim" value="20" step="1">
+                                        <span class="py-keyword block-kw" data-py=":" data-kt="なら">:</span>
                                     </div>
                                 </div>
                                 <div class="slot" data-role="then"></div>
                                 <div class="p-1 bg-orange-600 px-2 flex items-center else-bar">
-                                    <span class="py-keyword text-xs">else:</span>
+                                    <span class="py-keyword text-xs block-kw" data-py="else:" data-kt="でなければ">else:</span>
                                 </div>
                                 <div class="slot" data-role="else"></div>
                             </div>
@@ -600,27 +610,35 @@
                             <!-- アクションブロック -->
                             <div class="block block-action rounded" draggable="true" data-type="led_set" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
                                 <div class="delete-btn" title="Delete block">✕</div>
-                                <span>led.set(</span>
+                                <span class="block-kw" data-py="led.set(" data-kt="LEDを">led.set(</span>
                                 <select class="block-input led-lux-select" style="width:86px">
+                                    <option value="0">0 (OFF)</option>
+                                    <option value="1000">1000</option>
                                     <option value="2000">2000</option>
+                                    <option value="3000">3000</option>
                                     <option value="4000">4000</option>
+                                    <option value="5000">5000</option>
                                     <option value="6000">6000</option>
+                                    <option value="7000">7000</option>
                                     <option value="8000" selected>8000</option>
+                                    <option value="9000">9000</option>
                                     <option value="10000">10000</option>
+                                    <option value="11000">11000</option>
                                     <option value="12000">12000</option>
+                                    <option value="13000">13000</option>
                                     <option value="14000">14000</option>
+                                    <option value="15000">15000</option>
                                     <option value="16000">16000</option>
+                                    <option value="17000">17000</option>
                                     <option value="18000">18000</option>
+                                    <option value="19000">19000</option>
+                                    <option value="20000">20000</option>
                                 </select>
-                                <span>)</span>
+                                <span class="block-kw" data-py=")" data-kt="lxにする">)</span>
                             </div>
-                            <div class="block block-action rounded" draggable="true" data-type="led_off">
+                            <div class="block block-action block-nutrient rounded" draggable="true" data-type="water_add">
                                 <div class="delete-btn" title="Delete block">✕</div>
-                                led.off()
-                            </div>
-                            <div class="block block-action block-nutrient rounded" draggable="true" data-type="add_water">
-                                <div class="delete-btn" title="Delete block">✕</div>
-                                add_water(1)
+                                <span class="block-kw" data-py="water.add(1)" data-kt="水を足す(1cm)">water.add(1)</span>
                             </div>
                         </div>
 
@@ -628,7 +646,7 @@
                             <div id="workspace" class="drop-zone p-3 overflow-auto max-h-[570px] font-mono"></div>
                             <p class="text-[10px] text-slate-400 mt-2">※ブロックをドラッグして条件を組み立ててください。</p>
                             <button onclick="showPythonCode()" class="mt-2 w-full text-[11px] bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-full transition">
-                                🐍 Python書き出し
+                                書き出し
                             </button>
                         </div>
                     </div>
@@ -642,7 +660,7 @@
     <div id="python-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 px-5 py-4 w-full max-w-2xl mx-3">
             <div class="flex items-center justify-between mb-3">
-                <h2 class="text-sm font-bold text-slate-800">🐍 Pythonコード書き出し</h2>
+                <h2 id="python-modal-title" class="text-sm font-bold text-slate-800">🐍 Python書き出し</h2>
                 <button onclick="document.getElementById('python-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-lg leading-none">&times;</button>
             </div>
             <pre id="python-output" class="bg-slate-900 text-green-300 text-xs rounded-xl p-4 overflow-auto max-h-[60vh] font-mono whitespace-pre"></pre>
