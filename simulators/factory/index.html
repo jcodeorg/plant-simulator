@@ -786,6 +786,7 @@
                     ledActive:        state.ledActive,
                     ledLux:           state.ledLux,
                     etiolation:       state.etiolation,
+                    tipburn:          lettuce.state.tipburn,
                     stageName:        state.stageName,
                     stressBreakdown:  { ...state.stressBreakdown },
                 },
@@ -1471,29 +1472,31 @@
                 addLog('記録データがありません。シミュレーション実行後にダウンロードできます。', 'error');
                 return;
             }
-            const headers = ['Day','Hour','気温(°C)','湿度(%)','太陽光(lx)','光量合計(lx)','EC',
-                             '成長率(%)','ダメージ(%)','徒長(%)','水位(cm)','LED','LED光量(lx)','ステージ'];
+            const headers = ['Day','Hour','気温(°C)','湿度(%)','太陽光(lx)','LED光量(lx)','合計光量(lx)',
+                             '水位(cm)','ステージ','成長率(%)','ダメージ(%)','高温湿度ストレス','水過不足ストレス','徒長(%)','チップバーン(%)'];
             const rows = snapshots.map(snap => {
                 const wi = Math.min(snap.weatherIndex, weatherData.length - 1);
                 const w  = weatherData[wi];
                 const u  = snap.uiState;
-                const ledStr = u.ledActive ? 'ON' : 'OFF';
-                const light  = (w?.lux ?? 0) + (u.ledActive ? u.ledLux : 0);
+                const ledLux = u.ledActive ? u.ledLux : 0;
+                const light  = (w?.lux ?? 0) + ledLux;
+                const sb = u.stressBreakdown || {};
                 return [
                     w?.day  ?? '',
                     w?.hour ?? '',
                     w?.temp?.toFixed(1)     ?? '',
                     w?.humidity?.toFixed(1) ?? '',
                     w?.lux  ?? '',
+                    ledLux,
                     light,
-                    u.ec.toFixed(2),
+                    u.waterLevel.toFixed(2),
+                    u.stageName,
                     u.growth.toFixed(1),
                     (u.damage * 100).toFixed(1),
+                    (sb.env   ?? 0).toFixed(4),
+                    (sb.water ?? 0).toFixed(4),
                     (u.etiolation * 100).toFixed(1),
-                    u.waterLevel.toFixed(2),
-                    ledStr,
-                    u.ledActive ? u.ledLux : 0,
-                    u.stageName,
+                    ((u.tipburn ?? 0) * 100).toFixed(1),
                 ];
             });
             const csvContent = [headers, ...rows]
