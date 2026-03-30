@@ -477,7 +477,7 @@
                                 <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light">—</span><small>lx</small></p>
                             </div>
                             <div class="flex-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100 text-center min-w-0">
-                                <p class="text-[11px] text-amber-600 font-bold leading-tight">出力光</p>
+                                <p class="text-[11px] text-amber-600 font-bold leading-tight">LED</p>
                                 <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light-total">—</span><small>lx</small></p>
                             </div>
                             <div class="flex-1 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-100 text-center min-w-0">
@@ -1077,7 +1077,7 @@
             document.getElementById('ctrl-temp').textContent        = state.temp.toFixed(1);
             document.getElementById('ctrl-humid').textContent       = state.humid.toFixed(1);
             document.getElementById('ctrl-light').textContent       = Math.round(state.sunLux);
-            document.getElementById('ctrl-light-total').textContent = Math.round(state.light);
+            document.getElementById('ctrl-light-total').textContent = state.ledActive ? Math.round(state.ledLux) : 0;
             document.getElementById('ctrl-water').textContent       = state.waterLevel.toFixed(2);
             document.getElementById('ctrl-elapsed').textContent     = (simStats.totalHours / 24).toFixed(1);
             document.getElementById('ctrl-electric').textContent    = simStats.ledCostAcc.toFixed(1);
