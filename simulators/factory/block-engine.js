@@ -10,7 +10,7 @@ function isFromWorkspace(el) {
 }
 
 document.addEventListener('dragstart', (e) => {
-    if (e.target.classList.contains('block')) {
+    if (e.target?.classList?.contains('block')) {
         draggedElement = e.target;
         // ワークスペース内ブロックのドラッグ中のみゴミ箱を表示
         if (isFromWorkspace(draggedElement)) {
@@ -48,6 +48,7 @@ document.addEventListener('drop', (e) => {
         draggedElement.remove();
         overlay.classList.remove('active');
         updateElseBars();
+        saveWorkspace();
         draggedElement = null;
         return;
     }
@@ -73,6 +74,7 @@ document.addEventListener('drop', (e) => {
         target.appendChild(blockToDrop);
         applyBlockLang(blockToDrop);
         updateElseBars();
+        saveWorkspace();
     }
     // dragend で draggedElement はリセットされるが drop 後も念のため
     draggedElement = null;
@@ -98,7 +100,7 @@ function updateElseBars() {
 function getSensorValue(sensorType) {
     if (sensorType === 'sun_lx')      return state.sunLux;
     if (sensorType === 'temp')        return state.temp;
-    if (sensorType === 'water.cm') return state.waterLevel;
+    if (sensorType === 'water_cm') return state.waterLevel;
     if (sensorType === 'hour')        return state.hour;
     if (sensorType === 'day')         return state.day;
     return 0;
@@ -174,9 +176,9 @@ const OP_PY  = { lt: '<', gt: '>', eq: '==' };
 const ACT_PY = {
     led_set:   (b) => {
         const lx = parseInt(b.querySelector('.led-lux-select')?.value) || 0;
-        return lx === 0 ? 'led.set(0)  # LED OFF' : `led.set(${lx})`;
+        return lx === 0 ? 'led_set(0)  # LED OFF' : `led_set(${lx})`;
     },
-    water_add: ()  => 'water.add(1)',
+    water_add: ()  => 'water_add(1)',
 };
 
 // --- きたらっち書き出し ---
@@ -192,7 +194,7 @@ const ACT_KT = {
 const SENSOR_KT = {
     'sun_lx':  '太陽光',
     'temp':    '気温',
-    'water.cm':'水位',
+    'water_cm':'水位',
     'hour':    '時',
     'day':     '日',
 };
@@ -202,8 +204,8 @@ const LOGIC_KT = { and: 'かつ', or: 'または' };
 let blockLang = 'python';
 
 const SENSOR_DISPLAY = {
-    python:     { 'sun_lx': 'sun_lx', 'temp': 'temp', 'water.cm': 'water.cm', 'hour': 'hour', 'day': 'day' },
-    kitaratchi: { 'sun_lx': '太陽光', 'temp': '気温', 'water.cm': '水位', 'hour': '時', 'day': '日' },
+    python:     { 'sun_lx': 'sun_lx', 'temp': 'temp', 'water_cm': 'water_cm', 'hour': 'hour', 'day': 'day' },
+    kitaratchi: { 'sun_lx': '太陽光', 'temp': '気温', 'water_cm': '水位', 'hour': '時', 'day': '日' },
 };
 const OP_DISPLAY = {
     python:     { lt: '<', gt: '>', eq: '==' },
@@ -249,6 +251,7 @@ function setBlockLang(lang) {
     if (palette) applyBlockLang(palette);
     const ws = document.getElementById('workspace');
     if (ws) applyBlockLang(ws);
+    saveWorkspace();
 }
 
 function genPyBlocks(elementList, indent) {
@@ -325,17 +328,36 @@ function genKtBlocks(elementList, indent) {
 function generatePython() {
     const header = [
         '# PlantSimulator 制御ロジック (自動生成)',
-        '# センサー: sun_lx, temp, water.cm, hour, day',
+        '# センサー: sun_lx, temp, water_cm',
+        '# 経過時間: hour, day',
         '# アクション: led.set(lux 0=OFF), water.add(cm)',
         '',
+        'import time',
+        '',
+        'class MockSensors:',
+        '    def get(self, sensor_name):',
+        '       return 0',
+        '',
+        'def water_add(n):',
+        '    pass',
+        '',
+        'def led_set(n):',
+        '    pass',
+        '',
+        'sensors = MockSensors()',
+        'system_time_counter = 23 # システム時間カウンターを初期化',
+        '',
         'while True:',
-        '    # センサー値の取得',
+        '    time.sleep(1) # デモンストレーション用に短縮。実際は3600秒 (1時間)',
+        '    system_time_counter += 1 # カウンターを1増やす',
+        '    hour = system_time_counter % 24  # 0-23時',
+        '    day  = system_time_counter // 24 # 1日目から',
+        '',
         '    sun_lx        = sensors.get("sun_lx")',
         '    temp          = sensors.get("temp")',
-        '    water_cm      = sensors.get("water.cm")',
-        '    hour          = sensors.get("hour")',
-        '    day           = sensors.get("day")',
-        '    # 制御ロジック',
+        '    water_cm      = sensors.get("water_cm")',
+        '',
+        '    # 制御ロジック部分（ブロックから生成）',
     ];
     const ws = document.getElementById('workspace');
     const bodyLines = genPyBlocks(ws.children, 1);
@@ -369,3 +391,86 @@ function copyPythonCode(btn) {
         setTimeout(() => btn.textContent = '📋 コピー', 1500);
     });
 }
+
+// --- ローカルストレージ 保存・復元 ---
+const LS_KEY = 'plant-sim-blocks';
+
+function serializeBlocks(container) {
+    const result = [];
+    for (const block of container.children) {
+        const type = block.dataset?.type;
+        if (!type) continue;
+        const obj = { type };
+        if (type === 'custom_if_else') {
+            obj.sensor  = qsOwn(block, '.sensor-select')?.value;
+            obj.op      = qsOwn(block, '.operator-select')?.value;
+            obj.val     = qsOwn(block, '.value-input')?.value;
+            obj.logic   = qsOwn(block, '.logic-select')?.value || 'none';
+            obj.sensor2 = qsOwn(block, '.sensor-select2')?.value;
+            obj.op2     = qsOwn(block, '.operator-select2')?.value;
+            obj.val2    = qsOwn(block, '.value-input2')?.value;
+            const thenSlot = [...block.children].find(c => c.dataset?.role === 'then');
+            const elseSlot = [...block.children].find(c => c.dataset?.role === 'else');
+            obj.then = thenSlot ? serializeBlocks(thenSlot) : [];
+            obj.else = elseSlot ? serializeBlocks(elseSlot) : [];
+        } else if (type === 'led_set') {
+            obj.lux = block.querySelector('.led-lux-select')?.value;
+        }
+        result.push(obj);
+    }
+    return result;
+}
+
+function deserializeBlocks(container, blockList) {
+    for (const obj of blockList) {
+        const tmpl = document.querySelector(`.block-container [data-type="${obj.type}"]`);
+        if (!tmpl) continue;
+        const block = tmpl.cloneNode(true);
+        if (obj.type === 'custom_if_else') {
+            const ss = qsOwn(block, '.sensor-select');
+            const os = qsOwn(block, '.operator-select');
+            const vi = qsOwn(block, '.value-input');
+            const ls = qsOwn(block, '.logic-select');
+            const ss2 = qsOwn(block, '.sensor-select2');
+            const os2 = qsOwn(block, '.operator-select2');
+            const vi2 = qsOwn(block, '.value-input2');
+            if (ss)  ss.value  = obj.sensor  || 'sun_lx';
+            if (os)  os.value  = obj.op      || 'lt';
+            if (vi)  vi.value  = obj.val     || '5000';
+            if (ls)  { ls.value = obj.logic || 'none'; updateLogicRow(ls); }
+            if (ss2) ss2.value = obj.sensor2 || 'temp';
+            if (os2) os2.value = obj.op2     || 'lt';
+            if (vi2) vi2.value = obj.val2    || '20';
+            const thenSlot = [...block.children].find(c => c.dataset?.role === 'then');
+            const elseSlot = [...block.children].find(c => c.dataset?.role === 'else');
+            if (obj.then?.length && thenSlot) deserializeBlocks(thenSlot, obj.then);
+            if (obj.else?.length && elseSlot) deserializeBlocks(elseSlot, obj.else);
+        } else if (obj.type === 'led_set') {
+            const sel = block.querySelector('.led-lux-select');
+            if (sel && obj.lux !== undefined) sel.value = obj.lux;
+        }
+        container.appendChild(block);
+        applyBlockLang(block);
+    }
+}
+
+function saveWorkspace() {
+    const ws = document.getElementById('workspace');
+    if (!ws) return;
+    const data = { lang: blockLang, blocks: serializeBlocks(ws) };
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+}
+
+function loadWorkspace() {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    try {
+        const data = JSON.parse(raw);
+        if (data.lang) setBlockLang(data.lang);
+        const ws = document.getElementById('workspace');
+        if (ws && data.blocks?.length) deserializeBlocks(ws, data.blocks);
+        updateElseBars();
+    } catch (e) { /* 破損データは無視 */ }
+}
+
+document.addEventListener('DOMContentLoaded', loadWorkspace);

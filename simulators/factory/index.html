@@ -562,7 +562,7 @@
                                         <select class="block-input sensor-select">
                                             <option value="sun_lx">sun_lx</option>
                                             <option value="temp">temp</option>
-                                            <option value="water.cm">water.cm</option>
+                                            <option value="water_cm">water_cm</option>
                                             <option value="hour">hour</option>
                                             <option value="day">day</option>
                                         </select>
@@ -582,7 +582,7 @@
                                         <select class="block-input sensor-select2 logic-dim">
                                             <option value="sun_lx">sun_lx</option>
                                             <option value="temp">temp</option>
-                                            <option value="water.cm">water.cm</option>
+                                            <option value="water_cm">water_cm</option>
                                             <option value="hour">hour</option>
                                             <option value="day">day</option>
                                         </select>
@@ -604,7 +604,7 @@
 
                             <!-- アクションブロック -->
                             <div class="block block-action rounded" draggable="true" data-type="led_set" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-                                <span class="block-kw" data-py="led.set(" data-kt="LEDを">led.set(</span>
+                                <span class="block-kw" data-py="led_set(" data-kt="LEDを">led_set(</span>
                                 <select class="block-input led-lux-select" style="width:86px">
                                     <option value="0">0 (OFF)</option>
                                     <option value="1000">1000</option>
@@ -631,7 +631,7 @@
                                 <span class="block-kw" data-py=")" data-kt="lxにする">)</span>
                             </div>
                             <div class="block block-action block-nutrient rounded" draggable="true" data-type="water_add">
-                                <span class="block-kw" data-py="water.add(1)" data-kt="水を足す(1cm)">water.add(1)</span>
+                                <span class="block-kw" data-py="water_add(1)" data-kt="水を足す(1cm)">water_add(1)</span>
                             </div>
                         </div>
 
@@ -639,7 +639,7 @@
                             <div id="workspace" class="drop-zone p-3 overflow-auto max-h-[570px] font-mono"></div>
                             <p class="text-[10px] text-slate-400 mt-2">※ブロックをドラッグして条件を組み立ててください。</p>
                             <button onclick="showPythonCode()" class="mt-2 w-full text-[11px] bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-full transition">
-                                書き出し
+                                Python書き出し
                             </button>
                         </div>
                     </div>
