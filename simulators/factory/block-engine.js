@@ -5,14 +5,34 @@
 // --- D&D ---
 let draggedElement = null;
 
+function isFromWorkspace(el) {
+    return !!el.closest('#workspace');
+}
+
 document.addEventListener('dragstart', (e) => {
-    if (e.target.classList.contains('block')) draggedElement = e.target;
+    if (e.target.classList.contains('block')) {
+        draggedElement = e.target;
+        // ワークスペース内ブロックのドラッグ中のみゴミ箱を表示
+        if (isFromWorkspace(draggedElement)) {
+            const overlay = document.getElementById('trash-overlay');
+            if (overlay) overlay.classList.add('active');
+        }
+    }
     e.dataTransfer.setData('text/plain', '');
+});
+
+document.addEventListener('dragend', () => {
+    const overlay = document.getElementById('trash-overlay');
+    if (overlay) overlay.classList.remove('active');
+    draggedElement = null;
 });
 
 document.addEventListener('dragover', (e) => {
     const slot = e.target.closest('.slot') || e.target.closest('#workspace');
     if (slot) { e.preventDefault(); slot.classList.add('slot-highlight'); }
+    // ゴミ箱オーバーレイへのdragoverを許可
+    const overlay = e.target.closest('#trash-overlay');
+    if (overlay && draggedElement && isFromWorkspace(draggedElement)) e.preventDefault();
 });
 
 document.addEventListener('dragleave', (e) => {
@@ -21,6 +41,16 @@ document.addEventListener('dragleave', (e) => {
 });
 
 document.addEventListener('drop', (e) => {
+    // ゴミ箱への drop → 削除
+    const overlay = e.target.closest('#trash-overlay');
+    if (overlay && draggedElement && isFromWorkspace(draggedElement)) {
+        e.preventDefault();
+        draggedElement.remove();
+        overlay.classList.remove('active');
+        updateElseBars();
+        draggedElement = null;
+        return;
+    }
     const target = e.target.closest('.slot') || e.target.closest('#workspace');
     if (target && draggedElement) {
         e.preventDefault();
@@ -53,6 +83,7 @@ document.addEventListener('drop', (e) => {
         applyBlockLang(blockToDrop);
         updateElseBars();
     }
+    // dragend で draggedElement はリセットされるが drop 後も念のため
     draggedElement = null;
 });
 

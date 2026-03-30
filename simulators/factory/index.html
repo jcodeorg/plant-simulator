@@ -9,7 +9,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; overflow-x: hidden; background-color: #f0f4f8; }
-        .block-container { height: 570px; overflow-y: auto; }
+        .block-container { height: 570px; overflow-y: auto; position: relative; }
+        #trash-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(239,68,68,0.85);
+            border-radius: 12px;
+            z-index: 50;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.5rem;
+            pointer-events: none;
+        }
+        #trash-overlay.active { display: flex; pointer-events: auto; }
         
         /* ブロックの基本スタイル */
         .block { 
@@ -556,6 +571,10 @@
                     </div>
                     <div class="grid grid-cols-12 gap-3">
                         <div class="col-span-5 bg-slate-50 p-2 rounded-xl border border-slate-200 block-container">
+                            <div id="trash-overlay">
+                                <span>🗑️</span>
+                                <span class="text-sm font-bold mt-1">ここにドロップで削除</span>
+                            </div>
                             <p class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Code Blocks</p>
                             
                             <!-- 条件ブロック -->
@@ -579,7 +598,7 @@
                                         <input type="number" class="block-input value-input" value="5000" step="100">
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-wrap logic-row">
-                                        <select class="block-input logic-select logic-dim" style="width:54px" onchange="updateLogicRow(this)">
+                                        <select class="block-input logic-select logic-dim" style="width:68px" onchange="updateLogicRow(this)">
                                             <option value="none">--</option>
                                             <option value="and">and</option>
                                             <option value="or">or</option>
