@@ -67,15 +67,6 @@ document.addEventListener('drop', (e) => {
             inputs.forEach((inpt, i) => cloneInputs[i].value = inpt.value);
             const logicSel = blockToDrop.querySelector('.logic-select');
             if (logicSel) updateLogicRow(logicSel);
-
-            const btn = blockToDrop.querySelector('.delete-btn');
-            if (btn) {
-                btn.onclick = (ev) => {
-                    ev.stopPropagation();
-                    blockToDrop.remove();
-                    updateElseBars();
-                };
-            }
         } else {
             blockToDrop = draggedElement;
         }
@@ -371,10 +362,9 @@ function showPythonCode() {
     document.getElementById('python-modal').classList.remove('hidden');
 }
 
-function copyPythonCode() {
+function copyPythonCode(btn) {
     const code = document.getElementById('python-output').textContent;
     navigator.clipboard.writeText(code).then(() => {
-        const btn = event.target;
         btn.textContent = '✅ コピーしました';
         setTimeout(() => btn.textContent = '📋 コピー', 1500);
     });

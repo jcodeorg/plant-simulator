@@ -52,29 +52,6 @@
         }
         .block-nutrient { background-color: #22c55e; }
 
-        /* ゴミ箱ボタン */
-        .delete-btn {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            width: 20px;
-            height: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: white;
-            font-size: 12px;
-            transition: background 0.2s;
-            z-index: 10;
-        }
-        .delete-btn:hover {
-            background: rgba(239, 68, 68, 0.8);
-        }
-        .block-container .delete-btn { display: none; }
-
         /* 入力要素のスタイル */
         .block-input {
             background: rgba(255, 255, 255, 0.9);
@@ -579,7 +556,6 @@
                             
                             <!-- 条件ブロック -->
                             <div class="block block-if text-white rounded shadow-sm overflow-hidden mb-2" draggable="true" data-type="custom_if_else">
-                                <div class="delete-btn" title="Delete block">✕</div>
                                 <div class="p-1.5 bg-orange-500 flex flex-col gap-1 pr-8">
                                     <div class="flex items-center gap-1 flex-wrap">
                                         <span class="py-keyword block-kw" data-py="if" data-kt="もし">if</span>
@@ -628,7 +604,6 @@
 
                             <!-- アクションブロック -->
                             <div class="block block-action rounded" draggable="true" data-type="led_set" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-                                <div class="delete-btn" title="Delete block">✕</div>
                                 <span class="block-kw" data-py="led.set(" data-kt="LEDを">led.set(</span>
                                 <select class="block-input led-lux-select" style="width:86px">
                                     <option value="0">0 (OFF)</option>
@@ -656,7 +631,6 @@
                                 <span class="block-kw" data-py=")" data-kt="lxにする">)</span>
                             </div>
                             <div class="block block-action block-nutrient rounded" draggable="true" data-type="water_add">
-                                <div class="delete-btn" title="Delete block">✕</div>
                                 <span class="block-kw" data-py="water.add(1)" data-kt="水を足す(1cm)">water.add(1)</span>
                             </div>
                         </div>
@@ -684,7 +658,7 @@
             </div>
             <pre id="python-output" class="bg-slate-900 text-green-300 text-xs rounded-xl p-4 overflow-auto max-h-[60vh] font-mono whitespace-pre"></pre>
             <div class="flex gap-2 mt-3">
-                <button onclick="copyPythonCode()" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 rounded-full text-sm transition">📋 コピー</button>
+                <button onclick="copyPythonCode(this)" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 rounded-full text-sm transition">📋 コピー</button>
                 <button onclick="document.getElementById('python-modal').classList.add('hidden')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-full text-sm transition">閉じる</button>
             </div>
         </div>
