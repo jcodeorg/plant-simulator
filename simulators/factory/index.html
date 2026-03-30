@@ -756,6 +756,7 @@
                 document.getElementById('info-panel-' + s).style.display = s === sub ? '' : 'none';
                 document.getElementById('info-tab-' + s).className = 'sub-tab-btn ' + (s === sub ? 'active' : 'inactive');
             });
+            setChartVisible(sub === 'chart');
         }
 
         // スナップショットを保存（タイムライン巻き戻し用）

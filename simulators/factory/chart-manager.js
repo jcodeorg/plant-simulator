@@ -5,14 +5,30 @@
 // --- データストア ---
 const CHART_MAX = 1080; // 45日 × 24時間
 const chartData = {
-    temp:   [],
-    humid:  [],
-    light:  [],
-    growth: [],
-    damage: []
+    temp:     [],
+    humid:    [],
+    light:    [],
+    lightKlx: [], // lx→klx 変換済みキャッシュ（drawCharts の map 不要化）
+    growth:   [],
+    damage:   []
 };
 
 let mainChart = null;
+
+// --- 差分検知・描画スキップ用キャッシュ ---
+let _lastDrawN      = -1;
+let _lastScrubIndex = -2;
+let _lastPeakLux    = -1;
+let _cachedLabels   = [];
+let _chartVisible   = true; // switchInfoTab から設定される
+
+// チャートタブの表示/非表示を通知する（index.html の switchInfoTab から呼ぶ）
+function setChartVisible(visible) {
+    _chartVisible = visible;
+    if (visible) {
+        _lastDrawN = -1; // 強制再描画
+    }
+}
 
 // --- データ追加 ---
 function pushChart(key, val) {
@@ -22,15 +38,20 @@ function pushChart(key, val) {
 
 // 1シミュレーション時間ごとにデータを追記（coreLoop内で呼ぶ）
 function pushChartData() {
-    pushChart('temp',   state.temp);
-    pushChart('humid',  state.humid);
-    pushChart('light',  state.light);
-    pushChart('growth', state.growth);
-    pushChart('damage', state.damage * 100);
+    pushChart('temp',     state.temp);
+    pushChart('humid',    state.humid);
+    pushChart('light',    state.light);
+    pushChart('lightKlx', state.light / 1000); // klx 変換済みを同時格納
+    pushChart('growth',   state.growth);
+    pushChart('damage',   state.damage * 100);
 }
 
 function clearCharts() {
     Object.keys(chartData).forEach(k => chartData[k] = []);
+    _lastDrawN        = -1; // 差分キャッシュをリセット
+    _lastScrubIndex   = -2;
+    _lastPeakLux      = -1;
+    _cachedLabels     = [];
     if (mainChart) {
         mainChart.data.labels = [];
         mainChart.data.datasets.forEach(ds => ds.data = []);
@@ -172,22 +193,43 @@ function initMainChart() {
 
 // --- 描画（毎フレーム呼ぶ） ---
 function drawCharts() {
+    // (1) チャートタブが非表示なら即リターン
+    if (!_chartVisible) return;
+
     if (!mainChart) { initMainChart(); if (!mainChart) return; }
-    // チャートは常に蓄積済み全データを表示する（スクラブ位置に関係なく）
-    const n = chartData.temp.length;
+
+    const n        = chartData.temp.length;
+    const peakLux  = sunSettings.peakLux;
+    const scrub    = (scrubIndex >= 0 && scrubIndex < n) ? scrubIndex : -1;
+
+    // (2) データ量・スクラブ位置・peakLux がすべて前フレームと同じなら再描画不要
+    if (n === _lastDrawN && scrub === _lastScrubIndex && peakLux === _lastPeakLux) return;
+
     if (n === 0) return;
 
-    mainChart.data.labels = Array.from({ length: n }, (_, i) => i);
-    mainChart.data.datasets[0].data = chartData.temp.slice(0, n);
-    mainChart.data.datasets[1].data = chartData.humid.slice(0, n);
-    mainChart.data.datasets[2].data = chartData.light.slice(0, n).map(v => v / 1000); // lx → klx
-    mainChart.data.datasets[3].data = chartData.growth.slice(0, n);
-    mainChart.data.datasets[4].data = chartData.damage.slice(0, n);
-    // 光量軸の max を動的に更新
-    mainChart.options.scales.yLight.max = (sunSettings.peakLux + 15000) / 1000;
-    // スクラブマーカー位置を更新
-    mainChart._scrubMarkerIndex = (scrubIndex >= 0 && scrubIndex < n) ? scrubIndex : -1;
+    // (3) ラベル配列を必要な分だけ伸張（末尾追加のみ、全再生成しない）
+    for (let i = _cachedLabels.length; i < n; i++) _cachedLabels.push(i);
+    mainChart.data.labels = _cachedLabels;
+
+    // (4) slice/map を廃止し配列参照を直接代入（Chart.js は update() 時に読み直す）
+    mainChart.data.datasets[0].data = chartData.temp;
+    mainChart.data.datasets[1].data = chartData.humid;
+    mainChart.data.datasets[2].data = chartData.lightKlx; // 格納時点で klx 変換済み
+    mainChart.data.datasets[3].data = chartData.growth;
+    mainChart.data.datasets[4].data = chartData.damage;
+
+    // (5) 光量軸 max は peakLux が変わった時だけ更新
+    if (peakLux !== _lastPeakLux) {
+        mainChart.options.scales.yLight.max = (peakLux + 15000) / 1000;
+    }
+
+    mainChart._scrubMarkerIndex = scrub;
     mainChart.update('none');
+
+    // キャッシュを更新
+    _lastDrawN      = n;
+    _lastScrubIndex = scrub;
+    _lastPeakLux    = peakLux;
 }
 
 // --- スクラブマーカー カスタムプラグイン ---
