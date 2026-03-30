@@ -1257,9 +1257,12 @@
             chartData.temp.splice(idx + 1);
             chartData.humid.splice(idx + 1);
             chartData.light.splice(idx + 1);
+            chartData.lightKlx.splice(idx + 1);
             chartData.growth.splice(idx + 1);
             chartData.damage.splice(idx + 1);
             csvLog.splice(snap.csvLogLength);
+            // Chart.js の内部メタを即時フラッシュ（stale meta による TypeError を防ぐ）
+            flushChartState();
 
             // weatherIndex・scrubIndex を復元
             weatherIndex = snap.weatherIndex;

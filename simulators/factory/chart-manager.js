@@ -191,6 +191,16 @@ function initMainChart() {
     });
 }
 
+// データ配列をspliceで縮小した直後に呼ぶ。
+// Chart.js の内部メタ（_metasets）が古い長さのまま残るとクラッシュするため、
+// 一度空配列をセットして update() し、stale な meta エントリを消去する。
+function flushChartState() {
+    _lastDrawN = -1; // 次の drawCharts で強制再描画
+    if (!mainChart) return;
+    mainChart.data.datasets.forEach(ds => { ds.data = []; });
+    mainChart.update('none');
+}
+
 // --- 描画（毎フレーム呼ぶ） ---
 function drawCharts() {
     // (1) チャートタブが非表示なら即リターン
@@ -207,7 +217,8 @@ function drawCharts() {
 
     if (n === 0) return;
 
-    // (3) ラベル配列を必要な分だけ伸張（末尾追加のみ、全再生成しない）
+    // (3) ラベル配列を必要な分だけ伸張（または縮小）
+    if (_cachedLabels.length > n) _cachedLabels.length = n;
     for (let i = _cachedLabels.length; i < n; i++) _cachedLabels.push(i);
     mainChart.data.labels = _cachedLabels;
 
