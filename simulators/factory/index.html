@@ -369,12 +369,12 @@
                                     <span class="text-[11px] font-bold text-slate-600">1</span>
                                 </label>
                                 <input type="number" id="timer1-hour" min="0" max="23" value="6"
-                                       style="width:38px" class="text-[11px]" title="時刻(h)">
-                                <span class="text-[10px] text-slate-400 shrink-0">時</span>
+                                       style="width:38px" class="text-[11px] text-right" title="時刻(h)" data-timer-dim="1">
+                                <span class="text-[10px] text-slate-400 shrink-0" data-timer-dim="1">時</span>
                                 <input type="range" id="timer1-lux" min="0" max="20000" step="1000" value="8000"
-                                       style="width:38%; accent-color:#f59e0b"
+                                       style="width:38%; accent-color:#f59e0b" data-timer-dim="1"
                                        oninput="document.getElementById('timer1-label').textContent = this.value==0?'切':parseInt(this.value).toLocaleString()+' lx'">
-                                <span id="timer1-label" class="text-[11px] font-bold text-amber-700 shrink-0">8,000 lx</span>
+                                <span id="timer1-label" class="text-[11px] font-bold text-amber-700 shrink-0" data-timer-dim="1">8,000 lx</span>
                             </div>
                             <!-- スロット2 -->
                             <div id="timer2-row" class="timer-slot-row mt-1.5">
@@ -384,12 +384,12 @@
                                     <span class="text-[11px] font-bold text-slate-600">2</span>
                                 </label>
                                 <input type="number" id="timer2-hour" min="0" max="23" value="20"
-                                       style="width:38px" class="text-[11px]" title="時刻(h)">
-                                <span class="text-[10px] text-slate-400 shrink-0">時</span>
+                                       style="width:38px" class="text-[11px] text-right" title="時刻(h)" data-timer-dim="2">
+                                <span class="text-[10px] text-slate-400 shrink-0" data-timer-dim="2">時</span>
                                 <input type="range" id="timer2-lux" min="0" max="20000" step="1000" value="0"
-                                       style="width:38%; accent-color:#f59e0b"
+                                       style="width:38%; accent-color:#f59e0b" data-timer-dim="2"
                                        oninput="document.getElementById('timer2-label').textContent = this.value==0?'切':parseInt(this.value).toLocaleString()+' lx'">
-                                <span id="timer2-label" class="text-[11px] font-bold text-amber-700 shrink-0">切</span>
+                                <span id="timer2-label" class="text-[11px] font-bold text-amber-700 shrink-0" data-timer-dim="2">切</span>
                             </div>
                         </div>
                     </div>
@@ -729,7 +729,10 @@
 
         // --- タイマー管理 ---
         function updateTimerRowOpacity(n) {
-            // 有効／無効に関わらず常に通常表示
+            const enabled = document.getElementById(`timer${n}-enabled`)?.checked;
+            document.querySelectorAll(`[data-timer-dim="${n}"]`).forEach(el => {
+                el.style.opacity = enabled ? '1' : '0.35';
+            });
         }
 
         function getTimerSlots() {
