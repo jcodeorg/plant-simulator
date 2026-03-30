@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -242,7 +242,7 @@
             <div class="bg-white p-3 rounded-2xl shadow-lg border border-slate-200">
                 <div class="flex justify-between items-center mb-2">
                     <h2 class="text-xl font-bold text-slate-800 flex items-center">
-                        <span class="mr-2">🏪</span> 植物ショーケース
+                        <span class="mr-2">&#x1F96C;</span> 植物工場（サニーレタス）
                     </h2>
                     <div class="flex items-center gap-2">
                     </div>
@@ -262,14 +262,11 @@
 
                 <!-- シミュレーション制御 -->
                 <div class="mt-2 border-t border-slate-100 pt-2">
-                    <div class="flex items-center justify-between mb-2">
-                        <h3 class="font-bold text-slate-700 text-sm">⏱ シミュレーション制御</h3>
-                    </div>
 
                     <!-- タイムラインスクラバー -->
                     <div id="timeline-section" class="mb-2 pb-2 border-b border-slate-100">
                         <div class="flex items-center justify-between mb-1">
-                            <span class="text-[11px] font-bold text-slate-500">⏪ タイムライン</span>
+                            <span class="text-[11px] font-bold text-slate-500">🕐 タイムライン</span>
                         </div>
                         <input type="range" id="timeline-slider" min="0" max="0" step="1" value="0"
                                class="w-full accent-slate-400" oninput="scrubSim(parseInt(this.value))">
@@ -447,11 +444,19 @@
                     <span id="sensor-electric" class="hidden"></span>
 
                     <!-- ステージタイムライン (フル幅) -->
-                    <div class="mb-2 bg-slate-50 rounded-lg px-2 pt-1.5 pb-1.5 border border-slate-200">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-[10px] font-bold text-slate-500 uppercase">🌿 成長ステージ</span>
-                            <span class="text-[10px] text-slate-400" id="stage-req">💡 300lx | 🌡️ 22°C</span>
+                    <div class="mb-1.5 bg-slate-50 rounded-lg px-2 pt-1 pb-1 border border-slate-200">
+                        <div class="flex items-center justify-between mb-0.5">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold text-slate-500">🌿</span>
+                                <span class="text-xs font-bold text-purple-700" id="sensor-stage">発芽期</span>
+                                <span id="light-warn" class="hidden text-[10px] font-bold text-amber-600">⚠️ 光量不足</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-mono font-bold text-emerald-600">成長率 <span id="sens-growth-pct">0.0%</span></span>
+                                <span class="text-xs font-mono font-bold text-rose-500">ダメージ <span id="info-damage-pct">0.0%</span></span>
+                            </div>
                         </div>
+                        <span id="stage-req" class="hidden"></span>
                         <div class="relative">
                             <div class="stage-track">
                                 <div class="stage-seg dim" id="ss0" style="width:10%;background:#94a3b8;">発芽</div>
@@ -461,44 +466,36 @@
                             </div>
                             <div class="stage-cursor" id="stage-cursor" style="left:0%"></div>
                         </div>
-                        <div class="flex items-center justify-between mt-1.5">
-                            <span class="text-base font-bold text-purple-700" id="sensor-stage">発芽期</span>
-                            <div class="flex items-center gap-3">
-                                <span id="light-warn" class="hidden text-xs font-bold text-amber-600">⚠️ 光量不足</span>
-                                <span class="text-base font-mono font-bold text-emerald-600">成長率 <span id="sens-growth-pct">0.0%</span></span>
-                                <span class="text-base font-mono font-bold text-rose-500">ダメージ <span id="info-damage-pct">0.0%</span></span>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- センサーステータス -->
-                    <div id="ctrl-status-panel" class="mb-2">
+                    <div id="ctrl-status-panel" class="mb-1.5">
                         <div class="flex gap-1 flex-wrap">
-                            <div class="flex-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 text-center min-w-0">
+                            <div class="flex-1 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100 text-center min-w-0">
                                 <p class="text-[11px] text-blue-600 font-bold leading-tight">気温</p>
                                 <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-temp">—</span>°C</p>
                             </div>
-                            <div class="flex-1 bg-sky-50 px-2 py-1 rounded-lg border border-sky-100 text-center min-w-0">
+                            <div class="flex-1 bg-sky-50 px-2 py-0.5 rounded-lg border border-sky-100 text-center min-w-0">
                                 <p class="text-[11px] text-sky-600 font-bold leading-tight">湿度</p>
                                 <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-humid">—</span>%</p>
                             </div>
-                            <div class="flex-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100 text-center min-w-0">
+                            <div class="flex-1 bg-yellow-50 px-2 py-0.5 rounded-lg border border-yellow-100 text-center min-w-0">
                                 <p class="text-[11px] text-yellow-600 font-bold leading-tight">太陽光</p>
                                 <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light">—</span><small>lx</small></p>
                             </div>
-                            <div class="flex-1 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 text-center min-w-0">
+                            <div class="flex-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100 text-center min-w-0">
                                 <p class="text-[11px] text-amber-600 font-bold leading-tight">出力光</p>
                                 <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-light-total">—</span><small>lx</small></p>
                             </div>
-                            <div class="flex-1 bg-teal-50 px-2 py-1 rounded-lg border border-teal-100 text-center min-w-0">
+                            <div class="flex-1 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-100 text-center min-w-0">
                                 <p class="text-[11px] text-teal-600 font-bold leading-tight whitespace-nowrap">水位<span class="text-[9px] font-normal">(推奨5cm)</span></p>
                                 <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-water">—</span><small>cm</small></p>
                             </div>
-                            <div class="flex-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-center min-w-0">
+                            <div class="flex-1 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200 text-center min-w-0">
                                 <p class="text-[11px] text-slate-500 font-bold leading-tight">経過日数</p>
                                 <p class="text-sm font-bold text-slate-700 whitespace-nowrap"><span id="ctrl-elapsed">—</span><small>日</small></p>
                             </div>
-                            <div class="flex-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100 text-center min-w-0">
+                            <div class="flex-1 bg-yellow-50 px-2 py-0.5 rounded-lg border border-yellow-100 text-center min-w-0">
                                 <p class="text-[11px] text-yellow-700 font-bold leading-tight">電気代</p>
                                 <p class="text-sm font-bold text-yellow-800 whitespace-nowrap"><span id="ctrl-electric">—</span><small>円</small></p>
                             </div>
@@ -506,14 +503,14 @@
                     </div>
 
                     <!-- 植物ステータス: ダメージ + 内訳 -->
-                    <div class="mb-2">
-                        <div class="bg-rose-50 p-2 rounded-lg border border-rose-100">
+                    <div class="mb-1.5">
+                        <div class="bg-rose-50 px-2 py-1 rounded-lg border border-rose-100">
                             <div id="stress-breakdown"></div>
                         </div>
                     </div>
 
                     <!-- サブタブバー -->
-                    <div class="flex gap-1.5 mb-2 border-b border-slate-200 pb-1.5">
+                    <div class="flex gap-1.5 mb-1.5 border-b border-slate-200 pb-1">
                         <button id="info-tab-chart"  onclick="switchInfoTab('chart')"  class="sub-tab-btn active">📈 チャート</button>
                         <button id="info-tab-result" onclick="switchInfoTab('result')" class="sub-tab-btn inactive">📋 分析結果</button>
                     </div>
