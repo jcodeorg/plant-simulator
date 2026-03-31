@@ -4,38 +4,23 @@ https://jcodeorg.github.io/plant-simulator/
 
 ### シミュレータ一覧
 - [植物工場シミュレータ](./simulators/factory/)
-- [成長シミュレータ](./simulators/grow/)
-- [水稲シミュレータ](./simulators/rice/)
 
 ```
 plant-simulator/
 ├── simulators/
-│   ├── rice/
-│   │   ├── index.html
-│   │   ├── script.js
-│   │   └── style.css
-│   ├── wheat/
-│   │   ├── index.html
-│   │   ├── script.js
-│   │   └── style.css
-│   ├── tomato/
-│   │   ├── index.html
-│   │   ├── script.js
-│   │   └── style.css
-│   └── shared/        # 共通JSライブラリ（気象モデルなど）
-│       └── utils.js
+│   └── factory/
+│       ├── index.html
+│       ├── PlantSimulator.js
+│       ├── block-engine.js
+│       ├── chart-manager.js
+│       ├── sim-state.js
+│       └── WeatherGenerator.js
 │
 ├── docs/              # GitHub Pages 用ドキュメント
-│   ├── index.md
-│   ├── rice.md
-│   ├── wheat.md
-│   ├── tomato.md
-│   └── api/
-│       └── ...
+│   └── index.md
 │
 ├── README.md
-└── .github/
-    └── workflows/
+└── _config.yml
 ```
 
 

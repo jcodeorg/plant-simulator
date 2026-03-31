@@ -6,38 +6,23 @@ title: Plant Simulator Documents
 # 植物栽培シミュレータ集
 
 ## シミュレータ一覧
-- [水稲シミュレータ](../simulators/rice/)
-- [小麦シミュレータ](../simulators/wheat/)
-- [トマトシミュレータ](../simulators/tomato/)
+- [植物工場シミュレータ](../simulators/factory/)
 
 
 ```
 plant-simulator/
 ├── simulators/
-│   ├── rice/
-│   │   ├── index.html
-│   │   ├── script.js
-│   │   └── style.css
-│   ├── wheat/
-│   │   ├── index.html
-│   │   ├── script.js
-│   │   └── style.css
-│   ├── tomato/
-│   │   ├── index.html
-│   │   ├── script.js
-│   │   └── style.css
-│   └── shared/        # 共通JSライブラリ（気象モデルなど）
-│       └── utils.js
+│   └── factory/
+│       ├── index.html
+│       ├── PlantSimulator.js
+│       ├── block-engine.js
+│       ├── chart-manager.js
+│       ├── sim-state.js
+│       └── WeatherGenerator.js
 │
 ├── docs/              # GitHub Pages 用ドキュメント
-│   ├── index.md
-│   ├── rice.md
-│   ├── wheat.md
-│   ├── tomato.md
-│   └── api/
-│       └── ...
+│   └── index.md
 │
 ├── README.md
-└── .github/
-    └── workflows/
+└── _config.yml
 ```
