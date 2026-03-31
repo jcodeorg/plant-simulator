@@ -2,8 +2,8 @@
 
 https://jcodeorg.github.io/plant-simulator/
 
-### シミュレータ一覧
-- [植物工場シミュレータ](./simulators/factory/)
+### シミュレータ
+- [植物工場シミュレータ](./)
 
 ```
 plant-simulator/
