@@ -26,6 +26,7 @@ class PlantSimulator {
             storageDLI: 0.0,    // 光合成エネルギー蓄積量 (上限 1.0)
             isDayLightDeficit: false // 当日昼間に光不足があったフラグ (夜の徒長判定に使用)
         };
+        this.pendingWater = 0; // 予約された足し水量 (次の update() で適用)
     }
 
     /** 成長ステージの判定 */
@@ -51,6 +52,12 @@ class PlantSimulator {
         // --- 0. 日次リセットと積算光量 ---
         if (hour === 0) {
             this.state.isDayLightDeficit = false; // 昼間光不足フラグを朝にリセット
+        }
+
+        // --- 予約された足し水を適用 ---
+        if (this.pendingWater > 0) {
+            this.state.waterLevel += this.pendingWater;
+            this.pendingWater = 0;
         }
 
         const vpd = this.calculateVPD(t, h);
@@ -176,6 +183,6 @@ class PlantSimulator {
     }
 
     addWater(amount) {
-        this.state.waterLevel += amount;
+        this.pendingWater += amount; // 足し水を予約（update() 内で適用される）
     }
 }

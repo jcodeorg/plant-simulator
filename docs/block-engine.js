@@ -167,7 +167,7 @@ function executeBlockList(elementList) {
 
 function applyAction(type) {
     switch (type) {
-        case 'water_add': lettuce.addWater(1.0); state.waterLevel = lettuce.state.waterLevel; break;
+        case 'water_add': lettuce.addWater(1.0); break; // 水位更新は update() 内で行われる
     }
 }
 
