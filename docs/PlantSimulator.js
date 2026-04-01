@@ -26,6 +26,11 @@ class PlantSimulator {
             storageDLI: 0.0,    // 光合成エネルギー蓄積量 (上限 1.0)
             isDayLightDeficit: false // 当日昼間に光不足があったフラグ (夜の徒長判定に使用)
         };
+        // 発芽制御: 条件が連続して満たされた時間 (時間単位) と発芽開始フラグ
+        this.state.germinationTimerHours = 0.0;
+        this.state.germinationActive = false; // 条件が満たされ、発芽が開始されたか
+        // 土の締まり (0.0=緩い/通気良好, 1.0=非常に固い/通気悪い)
+        this.state.soilCompaction = 0.2;
         this.pendingWater = 0; // 予約された足し水量 (次の update() で適用)
     }
 
@@ -60,6 +65,33 @@ class PlantSimulator {
             this.pendingWater = 0;
         }
 
+        // --- 発芽条件チェック (リーフレタス) ---
+        // 条件が1時間連続で満たされると発芽期が開始する
+        // - 水分: しっとり（ビチャビチャはNG）
+        // - 温度: 15°C〜20°C
+        // - 酸素: 土の締まりが緩めで通気があること
+        // - 光: 1,000 lx 以上
+        const moistureGood = (this.state.waterLevel >= 4 && this.state.waterLevel <= 6);
+        const tempGood = (t >= 15 && t <= 20);
+        const oxygenGood = (this.state.soilCompaction <= 0.4);
+        const lightGood = (l >= 1000);
+        const germConditionsMet = moistureGood && tempGood && oxygenGood && lightGood;
+
+        // 発芽未開始かつ発芽期未到達ならタイマーを進める/リセット
+        if (this.state.growth < 0.10 && !this.state.germinationActive) {
+            if (germConditionsMet) {
+                this.state.germinationTimerHours += dt;
+            } else {
+                this.state.germinationTimerHours = 0.0;
+            }
+
+            if (this.state.germinationTimerHours >= 1.0) {
+                this.state.germinationActive = true;
+                // 発芽開始を明示するために最小成長値を与える（以降通常の発育計算が働く）
+                this.state.growth = Math.max(this.state.growth, 0.001);
+            }
+        }
+
         const vpd = this.calculateVPD(t, h);
         const sp = this.getStage();
 
@@ -82,37 +114,48 @@ class PlantSimulator {
         const iW = Math.exp(-this.config.kw * Math.pow(this.state.waterLevel - 5.0, 2)); // 渴水応答 (5cmからの乖離で成長抸制)
 
         // --- エネルギー蓄積・変換モデル ---
-        // 発芽期は暗所発芽が基本のため徒長しない
-        const isGerminating = this.state.growth < 0.10;
+        // 発芽期 (成長<0.10) の扱い: 発芽条件が満たされ発芽開始(`germinationActive`)するまでは
+        // 種子は成長しない（光合成蓄積も行わない）。条件成立後は通常の発育ルートへ入る。
+        const isGerminating = this.state.growth < 0.05; // 発芽初期（成長0.05未満）を特に厳しく制限
+        const allowGerminationGrowth = this.state.germinationActive || this.state.growth >= 0.10;
         let etiolStep = 0;            // 徒長進行速度 (per hour)
         const dayLightThreshold = 5000; // 昼間光不足の判定閾値 (lx)
 
         let deltaG = 0;
         if (isDaytime) {
             // 昼間: 光合成でエネルギーを蓄める
-            // /10 で正規化: 良好な照度12hでほぼ満タン(~0.7)になるスケール
-            this.state.storageDLI = Math.min(1.0, this.state.storageDLI + fL * fT * dt / 10);
+            // 発芽未開始の場合は昼夜を問わず成長や光合成蓄積を行わない
+            if (isGerminating && !allowGerminationGrowth) {
+                deltaG = 0;
+            } else {
+                // /10 で正規化: 良好な照度12hでほぼ満タン(~0.7)になるスケール
+                this.state.storageDLI = Math.min(1.0, this.state.storageDLI + fL * fT * dt / 10);
 
-            // 昼間光不足フラグ: 5000lx未満なら「徒長予備軍」として記録
-            if (!isGerminating && l < dayLightThreshold) {
-                this.state.isDayLightDeficit = true;
-            }
+                // 昼間光不足フラグ: 5000lx未満なら「徒長予備軍」として記録
+                if (!isGerminating && l < dayLightThreshold) {
+                    this.state.isDayLightDeficit = true;
+                }
 
-            // デンプン飽和チェック: 0.7超で光合成抑制・わずかにチップバーンリスク上昇
-            let satDebuff = 1.0;
-            if (this.state.storageDLI > 0.7) {
-                satDebuff = 0.8;  // 抑制は軽め
-                // 飽和によるチップバーンリスク（非常にゆっくり）
-                this.state.tipburn = Math.min(1.0, this.state.tipburn + 0.002 * dt);
+                // デンプン飽和チェック: 0.7超で光合成抑制・わずかにチップバーンリスク上昇
+                let satDebuff = 1.0;
+                if (this.state.storageDLI > 0.7) {
+                    satDebuff = 0.8;  // 抑制は軽め
+                    // 飽和によるチップバーンリスク（非常にゆっくり）
+                    this.state.tipburn = Math.min(1.0, this.state.tipburn + 0.002 * dt);
+                }
+                deltaG = sp.baseSpeed * fL * fT * fVPD * iW * satDebuff * dt;
             }
-            deltaG = sp.baseSpeed * fL * fT * fVPD * iW * satDebuff * dt;
         } else {
             // 夜間: 蓄積エネルギーを「成長 (Growth)」または「徒長 (Etiolation)」に分配
             const conversionRate = 0.1 * fT; // 夜間温度が良いほど変換効率アップ
             const cost = Math.min(this.state.storageDLI, 0.05 * dt);
             this.state.storageDLI = Math.max(0, this.state.storageDLI - cost);
 
-            if (!isGerminating && this.state.isDayLightDeficit) {
+            // 発芽未開始ならエネルギー変換もしない
+            if (isGerminating && !allowGerminationGrowth) {
+                etiolStep = 0;
+                deltaG = 0;
+            } else if (!isGerminating && this.state.isDayLightDeficit) {
                 // 【徒長ルート】昼間に光不足 → 「光のある高さまで伸びろ」という命令
                 // 夜温が高いほど細胞伸長が加速（代謝過剰による軟弱化）
                 const nightTempMult = t > 20 ? 1.0 + (t - 20) * 0.15 : 1.0;
@@ -164,10 +207,12 @@ class PlantSimulator {
         const netDamage = Math.max(0, dmgE + dmgW + dmgT - recov) + dmgEt; // 徒長ストレスは回復で相殺されない（自然回復は主に環境ストレスの回復を表すため）
         this.state.damage = Math.max(0, Math.min(1.0, this.state.damage + netDamage * dt));
 
+        const stageName = (this.state.growth < 0.10 && !this.state.germinationActive) ? '未発芽' : sp.name;
+
         return {
             ...this.state,
             // etiolRate: etiolStep,  // 現時点の徒長ダメージ発生率 (SVG描画・ブレークダウン表示用)
-            stageName: sp.name,
+            stageName: stageName,
             vpd: vpd,
             isDead: this.state.damage >= 1.0,
             isHarvestable: this.state.growth >= 1.0 && this.state.damage < 0.5,
@@ -184,5 +229,10 @@ class PlantSimulator {
 
     addWater(amount) {
         this.pendingWater += amount; // 足し水を予約（update() 内で適用される）
+    }
+
+    setSoilCompaction(value) {
+        // 値は 0.0 (緩い) 〜 1.0 (非常に固い) の範囲を想定
+        this.state.soilCompaction = Math.max(0, Math.min(1, value));
     }
 }
