@@ -31,6 +31,23 @@ class PlantSimulator {
         this.state.germinationActive = false; // 条件が満たされ、発芽が開始されたか
         // 土の締まり (0.0=緩い/通気良好, 1.0=非常に固い/通気悪い)
         this.state.soilCompaction = 0.2;
+        // 発芽パラメータ（リーフレタス用）
+        // - moistureMin/Max: 土のしっとりレンジ（過湿はNG）
+        // - tempMin/Max: 発芽に適した温度範囲
+        // - maxAvoidTemp: 回避すべき高温閾値（安全側の上限）
+        // - soilCompactionMax: 通気良好と見なす最大の土の締まり
+        // - lightMin: 発芽に必要な最小照度 (lx)
+        // - requiredHours: 条件が連続で満たされる必要時間 (時間)
+        this.germinationParams = {
+            moistureMin: 4.0,
+            moistureMax: 6.0,
+            tempMin: 15.0,
+            tempMax: 20.0,
+            maxAvoidTemp: 25.0,
+            soilCompactionMax: 0.4,
+            lightMin: 1000,
+            requiredHours: 1.0
+        };
         this.pendingWater = 0; // 予約された足し水量 (次の update() で適用)
     }
 
@@ -66,15 +83,12 @@ class PlantSimulator {
         }
 
         // --- 発芽条件チェック (リーフレタス) ---
-        // 条件が1時間連続で満たされると発芽期が開始する
-        // - 水分: しっとり（ビチャビチャはNG）
-        // - 温度: 15°C〜20°C
-        // - 酸素: 土の締まりが緩めで通気があること
-        // - 光: 1,000 lx 以上
-        const moistureGood = (this.state.waterLevel >= 4 && this.state.waterLevel <= 6);
-        const tempGood = (t >= 15 && t <= 20);
-        const oxygenGood = (this.state.soilCompaction <= 0.4);
-        const lightGood = (l >= 1000);
+        // 条件が `germinationParams.requiredHours` 連続で満たされると発芽期が開始する
+        const gp = this.germinationParams;
+        const moistureGood = (this.state.waterLevel >= gp.moistureMin && this.state.waterLevel <= gp.moistureMax);
+        const tempGood = (t >= gp.tempMin && t <= gp.tempMax && t < gp.maxAvoidTemp);
+        const oxygenGood = (this.state.soilCompaction <= gp.soilCompactionMax);
+        const lightGood = (l >= gp.lightMin);
         const germConditionsMet = moistureGood && tempGood && oxygenGood && lightGood;
 
         // 発芽未開始かつ発芽期未到達ならタイマーを進める/リセット
@@ -85,7 +99,7 @@ class PlantSimulator {
                 this.state.germinationTimerHours = 0.0;
             }
 
-            if (this.state.germinationTimerHours >= 1.0) {
+            if (this.state.germinationTimerHours >= gp.requiredHours) {
                 this.state.germinationActive = true;
                 // 発芽開始を明示するために最小成長値を与える（以降通常の発育計算が働く）
                 this.state.growth = Math.max(this.state.growth, 0.001);
@@ -234,5 +248,10 @@ class PlantSimulator {
     setSoilCompaction(value) {
         // 値は 0.0 (緩い) 〜 1.0 (非常に固い) の範囲を想定
         this.state.soilCompaction = Math.max(0, Math.min(1, value));
+    }
+
+    setGerminationParams(params) {
+        // 部分的に上書き可能
+        this.germinationParams = Object.assign({}, this.germinationParams, params);
     }
 }
