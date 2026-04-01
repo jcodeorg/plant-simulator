@@ -965,31 +965,57 @@
          * @returns {{ back: string, front: string, frontOpacity: number }}
          */
         function getPlantCrossfade(growth, etiolation, tipburn, damage) {
-            // 特殊状態は即切替（単一画像でフェードなし）
-            if (damage >= 1.0)      return { back: 'img/lettuce_9.png', front: 'img/lettuce_9.png', frontOpacity: 1 };
-            if (etiolation >= 0.5)  return { back: 'img/lettuce_7.png', front: 'img/lettuce_7.png', frontOpacity: 1 };
-            if (tipburn    >= 0.5)  return { back: 'img/lettuce_8.png', front: 'img/lettuce_8.png', frontOpacity: 1 };
-
+            // 基本は成長に応じたベース画像 (lettuce_0..5)
             const N    = 6;           // 画像枚数 (lettuce_0〜5)
-            const step = 100 / N;     // 1枚あたりの成長幅 ≈ 16.67%
+            const step = 100 / N;     // 1枚あたりの成長幅
             const half = 2.5;         // クロスフェード幅 5% の半分
 
-            // 各境界付近でクロスフェード
+            // ベース画像の決定（境界付近は前後でクロスフェード）
+            let baseBack = null, baseFront = null, baseFrontOpacity = 1;
             for (let n = 1; n < N; n++) {
-                const b = n * step;   // 境界の成長%
+                const b = n * step;
                 if (growth >= b - half && growth <= b + half) {
-                    const t = (growth - (b - half)) / (half * 2); // 0→1
-                    return {
-                        back:         `img/lettuce_${n - 1}.png`,
-                        front:        `img/lettuce_${n}.png`,
-                        frontOpacity: Math.max(0, Math.min(1, t))
-                    };
+                    const t = (growth - (b - half)) / (half * 2);
+                    baseBack = `img/lettuce_${n - 1}.png`;
+                    baseFront = `img/lettuce_${n}.png`;
+                    baseFrontOpacity = Math.max(0, Math.min(1, t));
+                    break;
+                }
+            }
+            if (!baseBack) {
+                const idx = Math.min(N - 1, Math.floor(growth / step));
+                baseBack = `img/lettuce_${idx}.png`;
+                baseFront = baseBack;
+                baseFrontOpacity = 1;
+            }
+
+            // 特殊状態のオーバーレイ（優先度: damage > tipburn > etiolation）
+            // オーバーレイは baseBack/baseFront の上に front 画像を置き、opacity でクロスフェードする
+            // damage: lettuce_9, tipburn: lettuce_8, etiolation: lettuce_6/7
+            if (damage > 0) {
+                const op = Math.max(0, Math.min(1, damage));
+                return { back: baseBack, front: 'img/lettuce_9.png', frontOpacity: op * 1.0 };
+            }
+            if (tipburn > 0) {
+                const op = Math.max(0, Math.min(1, tipburn));
+                return { back: baseBack, front: 'img/lettuce_8.png', frontOpacity: op * 0.95 };
+            }
+
+            // etiolation: 0..1 range. Use lettuce_6 for low etiolation, lettuce_7 for high.
+            if (etiolation > 0) {
+                // split at 0.5: 0..0.5 -> fade base -> lettuce_6, 0.5..1 -> fade lettuce_6 -> lettuce_7
+                if (etiolation <= 0.5) {
+                    const op = Math.max(0, Math.min(1, etiolation / 0.5));
+                    return { back: baseBack, front: 'img/lettuce_6.png', frontOpacity: op * 0.9 };
+                } else {
+                    const op = Math.max(0, Math.min(1, (etiolation - 0.5) / 0.5));
+                    // Crossfade from lettuce_6 to lettuce_7 by using lettuce_6 as back and lettuce_7 as front
+                    return { back: 'img/lettuce_6.png', front: 'img/lettuce_7.png', frontOpacity: op * 0.98 };
                 }
             }
 
-            // 境界外: ソリッド表示
-            const idx = Math.min(N - 1, Math.floor(growth / step));
-            return { back: `img/lettuce_${idx}.png`, front: `img/lettuce_${idx}.png`, frontOpacity: 1 };
+            // デフォルトは成長ベースのクロスフェード
+            return { back: baseBack, front: baseFront, frontOpacity: baseFrontOpacity };
         }
 
         function render() {
