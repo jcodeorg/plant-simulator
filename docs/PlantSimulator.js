@@ -48,6 +48,21 @@ class PlantSimulator {
             lightMin: 1000,
             requiredHours: 1.0
         };
+        // 種子由来の初期エネルギー（発芽直後の成長・徒長に使用される）
+        this.state.seedEnergy = 0.20; // 内部エネルギースケール（強め）
+        // 種子エネルギーの変換パラメータ
+        this.seedParams = {
+            dayEtiolConversion: 1.4,   // 昼間の種子/貯蔵エネルギー→徒長変換効率（強め）
+            nightEtiolConversion: 1.0, // 夜間の変換効率
+            maxDayEtiolUse: 0.12,      // 昼間に1hあたり使える最大エネルギー（大幅増加）
+            maxNightUse: 0.08          // 夜間に1hあたり使える最大エネルギー（やや増加）
+        };
+        // 徒長予備プール: 発芽後に持続的に徒長を起こせる余力（単位: 内部エネルギースケール）
+        this.etiolationParams = {
+            reserveInitial: 6.0,    // 初期リザーブ量（デフォルトでかなり持続）
+            reserveEfficiency: 1.0   // リザーブから徒長への変換効率
+        };
+        this.state.etiolationReserve = this.etiolationParams.reserveInitial;
         this.pendingWater = 0; // 予約された足し水量 (次の update() で適用)
     }
 
@@ -133,20 +148,51 @@ class PlantSimulator {
         const isGerminating = this.state.growth < 0.05; // 発芽初期（成長0.05未満）を特に厳しく制限
         const allowGerminationGrowth = this.state.germinationActive || this.state.growth >= 0.10;
         let etiolStep = 0;            // 徒長進行速度 (per hour)
-        const dayLightThreshold = 5000; // 昼間光不足の判定閾値 (lx)
+        // 診断用の直近使用量・希望量
+        let lastDesiredDay = 0;
+        let lastDesiredCost = 0;
+        let lastSeedUsed = 0;
+        let lastStorageUsed = 0;
+        let lastReserveUsed = 0;
+        const dayLightThreshold = 2000; // 昼間光不足の判定閾値 (lx) — 低光判定を厳しくして昼間徒長が起きやすくする
 
         let deltaG = 0;
         if (isDaytime) {
             // 昼間: 光合成でエネルギーを蓄める
-            // 発芽未開始の場合は昼夜を問わず成長や光合成蓄積を行わない
+            // 発芽未開始の場合は通常の光合成成長は行わないが、
+            // 種子エネルギーがある場合は昼間でも徒長エネルギーとして消費可能にする。
             if (isGerminating && !allowGerminationGrowth) {
-                deltaG = 0;
+                // 発芽前でも光が不足している場合、種子エネルギーを使って徒長を起こす
+                if (l < dayLightThreshold) {
+                    const maxUse = this.seedParams.maxDayEtiolUse * dt;
+                    const desired = Math.min(this.state.storageDLI + this.state.seedEnergy, maxUse);
+                    // 供給優先度: seedEnergy -> storageDLI -> etiolReserve
+                    const seedUsed = Math.min(this.state.seedEnergy, desired);
+                    const remainAfterSeed = desired - seedUsed;
+                    const storageUsed = Math.min(this.state.storageDLI, remainAfterSeed);
+                    const remainAfterStorage = remainAfterSeed - storageUsed;
+                    const reserveUsed = Math.min(this.state.etiolationReserve, remainAfterStorage);
+                    // 差し引き
+                    this.state.seedEnergy = Math.max(0, this.state.seedEnergy - seedUsed);
+                    this.state.storageDLI = Math.max(0, this.state.storageDLI - storageUsed);
+                    this.state.etiolationReserve = Math.max(0, this.state.etiolationReserve - reserveUsed);
+                    const tempMult = t > 20 ? 1.0 + (t - 20) * 0.1 : 1.0;
+                    // etiolStep にリザーブの効率も反映
+                    etiolStep = (desired / dt) * this.seedParams.dayEtiolConversion * sp.etiolSens * tempMult * this.etiolationParams.reserveEfficiency;
+                    deltaG = desired * 0.05; // 種子/リザーブエネルギーによる控えめな成長
+                    lastDesiredDay = desired;
+                    lastSeedUsed = seedUsed;
+                    lastStorageUsed = storageUsed;
+                    lastReserveUsed = reserveUsed;
+                } else {
+                    deltaG = 0;
+                }
             } else {
                 // /10 で正規化: 良好な照度12hでほぼ満タン(~0.7)になるスケール
                 this.state.storageDLI = Math.min(1.0, this.state.storageDLI + fL * fT * dt / 10);
 
-                // 昼間光不足フラグ: 5000lx未満なら「徒長予備軍」として記録
-                if (!isGerminating && l < dayLightThreshold) {
+                // 昼間光不足フラグ: 低照度なら「徒長予備軍」として記録
+                if (allowGerminationGrowth && l < dayLightThreshold) {
                     this.state.isDayLightDeficit = true;
                 }
 
@@ -158,18 +204,57 @@ class PlantSimulator {
                     this.state.tipburn = Math.min(1.0, this.state.tipburn + 0.002 * dt);
                 }
                 deltaG = sp.baseSpeed * fL * fT * fVPD * iW * satDebuff * dt;
+
+                // 昼間でも光が不足しているときは、蓄積エネルギー＋種子エネルギーを使って
+                // 一部を徒長に回す（夜間のみだった徒長を昼間にも発生させる）
+                if (allowGerminationGrowth && l < dayLightThreshold) {
+                    const maxDayUse = this.seedParams.maxDayEtiolUse * dt;
+                    const desiredDay = Math.min(this.state.storageDLI + this.state.seedEnergy, maxDayUse);
+                    if (desiredDay > 0) {
+                        const seedUsed = Math.min(this.state.seedEnergy, desiredDay);
+                        const remainAfterSeed = desiredDay - seedUsed;
+                        const storageUsed = Math.min(this.state.storageDLI, remainAfterSeed);
+                        const remainAfterStorage = remainAfterSeed - storageUsed;
+                        const reserveUsed = Math.min(this.state.etiolationReserve, remainAfterStorage);
+                        this.state.seedEnergy = Math.max(0, this.state.seedEnergy - seedUsed);
+                        this.state.storageDLI = Math.max(0, this.state.storageDLI - storageUsed);
+                        this.state.etiolationReserve = Math.max(0, this.state.etiolationReserve - reserveUsed);
+                        const tempMult = t > 20 ? 1.0 + (t - 20) * 0.1 : 1.0;
+                        etiolStep += (desiredDay / dt) * this.seedParams.dayEtiolConversion * sp.etiolSens * tempMult * this.etiolationParams.reserveEfficiency;
+                        // 徒長に回すため成長をやや抑える
+                        deltaG = Math.max(0, deltaG - desiredDay * 0.2);
+                        lastDesiredDay = desiredDay;
+                        lastSeedUsed = seedUsed;
+                        lastStorageUsed = storageUsed;
+                        lastReserveUsed = reserveUsed;
+                    }
+                }
             }
         } else {
             // 夜間: 蓄積エネルギーを「成長 (Growth)」または「徒長 (Etiolation)」に分配
             const conversionRate = 0.1 * fT; // 夜間温度が良いほど変換効率アップ
-            const cost = Math.min(this.state.storageDLI, 0.05 * dt);
-            this.state.storageDLI = Math.max(0, this.state.storageDLI - cost);
+            // 夜間は貯蔵エネルギー＋種子エネルギーを使用可能にする
+            const maxNight = this.seedParams.maxNightUse * dt;
+            const desiredCost = Math.min(this.state.storageDLI + this.state.seedEnergy, maxNight);
+            const storageUsed = Math.min(this.state.storageDLI, desiredCost);
+            const remainAfterStorage = desiredCost - storageUsed;
+            const seedUsed = Math.min(this.state.seedEnergy, remainAfterStorage);
+            const remainAfterSeed = remainAfterStorage - seedUsed;
+            const reserveUsed = Math.min(this.state.etiolationReserve, remainAfterSeed);
+            this.state.storageDLI = Math.max(0, this.state.storageDLI - storageUsed);
+            this.state.seedEnergy = Math.max(0, this.state.seedEnergy - seedUsed);
+            this.state.etiolationReserve = Math.max(0, this.state.etiolationReserve - reserveUsed);
+            const cost = desiredCost;
+            lastDesiredCost = desiredCost;
+            lastSeedUsed = seedUsed;
+            lastStorageUsed = storageUsed;
+            lastReserveUsed = reserveUsed;
 
             // 発芽未開始ならエネルギー変換もしない
             if (isGerminating && !allowGerminationGrowth) {
                 etiolStep = 0;
                 deltaG = 0;
-            } else if (!isGerminating && this.state.isDayLightDeficit) {
+            } else if (allowGerminationGrowth && this.state.isDayLightDeficit) {
                 // 【徒長ルート】昼間に光不足 → 「光のある高さまで伸びろ」という命令
                 // 夜温が高いほど細胞伸長が加速（代謝過剰による軟弱化）
                 const nightTempMult = t > 20 ? 1.0 + (t - 20) * 0.15 : 1.0;
@@ -179,7 +264,7 @@ class PlantSimulator {
                 // 【正常ルート】エネルギーを均一な成長に変換
                 deltaG = cost * conversionRate;
                 // 夜温過剰による軟弱化（光は足りているが高温で細胞が過剰伸長する）
-                if (!isGerminating && t > 22) {
+                if (allowGerminationGrowth && t > 22) {
                     etiolStep = (t - 22) * 0.004 * sp.etiolSens;
                 }
             }
@@ -238,6 +323,16 @@ class PlantSimulator {
                 recovery: recov   * dt,  // 自然回復/h
                 net:      netDamage * dt  // 正味ダメージ変化/h
             }
+            ,
+            debug: {
+                etiolStep: etiolStep,
+                lastDesiredDay: lastDesiredDay,
+                lastDesiredCost: lastDesiredCost,
+                lastSeedUsed: lastSeedUsed,
+                lastStorageUsed: lastStorageUsed,
+                lastReserveUsed: lastReserveUsed,
+                etiolReserve: this.state.etiolationReserve
+            }
         };
     }
 
@@ -254,4 +349,9 @@ class PlantSimulator {
         // 部分的に上書き可能
         this.germinationParams = Object.assign({}, this.germinationParams, params);
     }
+}
+
+// Node.js での利用を想定したエクスポート（ブラウザ側では無視される）
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = PlantSimulator;
 }
