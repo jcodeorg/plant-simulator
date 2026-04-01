@@ -960,14 +960,14 @@
         /**
          * getPlantCrossfade: 植物状態から back/front 画像と front 不透明度を返す
          *
-         * ■ 通常成長パス: growth(0-100%) →  lettuce_0 → 1 → 2 → 3 → 4 → 5
-         *   各境界 ±1.25%（計2.5%）でクロスフェード
+         * ■ 通常成長パス: growth(0-1.0) → lettuce_0 → 1 → 2 → 3 → 4 → 5
+         *   growth値の閾値（0.0, 0.05, 0.1, 0.3, 0.7, 0.8）で遷移、各境界 ±0.025（計5%）でクロスフェード
          *   後半で tipburn > 0 → 現在画像から lettuce_8 へ（tipburn値でクロスフェード）
          *
          * ■ 徒長パス: etiolation ≥ 0.025 → lettuce_0 → 1 → 6 → 7
-         *   etiolation値の閾値(0.05/0.30/0.60)で遷移、各境界 ±0.0125（計2.5%）
+         *   etiolation値の閾値(0.05/0.10/0.30)で遷移、各境界 ±0.025（計5%）
          *
-         * ■ ダメージ: 全状態から damage > 0.8875 → lettuce_9 へ（2.5%ゾーンでクロスフェード）
+         * ■ ダメージ: 全状態から damage > 0.8 → lettuce_9 へ（20%ゾーンでクロスフェード）
          *
          * @returns {{ back: string, front: string, frontOpacity: number }}
          */
@@ -980,8 +980,8 @@
             // === 徒長パス: lettuce_0 → 1 → 6 → 7 ===
             if (etiolation >= 0.025) {
                 const imgs   = [0, 1, 6, 7];
-                const bounds = [0.05, 0.30, 0.60]; // 画像境界
-                const H = 0.0125; // ±1.25% = 計2.5%
+                const bounds = [0.05, 0.20, 0.60]; // 画像境界
+                const H = 0.025; // ±2.5% = 計5%
 
                 // デフォルト: 最初の画像
                 back = img(imgs[0]); front = back; fo = 1;
@@ -1004,25 +1004,31 @@
             }
             // === 通常成長パス: lettuce_0 → 1 → 2 → 3 → 4 → 5 ===
             else {
-                const N = 6, step = 1.0 / N, H = 0.0125; // ±0.0125 = 計2.5%
+                const imgs   = [0, 1, 2, 3, 4, 5];
+                const bounds = [0.05, 0.10, 0.30, 0.70, 0.80]; // 各境界
+                const H = 0.025; // ±0.025 = 計0.05
 
-                back = null; front = null; fo = 1;
-                for (let n = 1; n < N; n++) {
-                    const b = n * step;
-                    if (growth >= b - H && growth <= b + H) {
-                        back  = img(n - 1);
-                        front = img(n);
-                        fo = clamp((growth - b + H) / (2 * H));
+                // デフォルト: 最初の画像
+                back = img(imgs[0]); front = back; fo = 1;
+
+                for (let i = 0; i < bounds.length; i++) {
+                    const lo = bounds[i] - H, hi = bounds[i] + H;
+                    if (growth < lo) {
+                        back = img(imgs[i]); front = back; fo = 1;
                         break;
+                    } else if (growth <= hi) {
+                        back  = img(imgs[i]);
+                        front = img(imgs[i + 1]);
+                        fo = clamp((growth - lo) / (2 * H));
+                        break;
+                    } else if (i === bounds.length - 1) {
+                        // 最終境界を超えた
+                        back = img(imgs[imgs.length - 1]); front = back; fo = 1;
                     }
-                }
-                if (!back) {
-                    const idx = Math.min(N - 1, Math.floor(growth / step));
-                    back = img(idx); front = back; fo = 1;
                 }
 
                 // チップバーン: 現在の成長画像 → lettuce_8
-                if (tipburn > 0.0125) {
+                if (tipburn > 0.125 && growth >= 0.30) {
                     back  = fo >= 0.5 ? front : back;
                     front = img(8);
                     fo    = clamp(tipburn);
@@ -1030,11 +1036,11 @@
             }
 
             // === ダメージ (全状態共通): → lettuce_9 ===
-            const DMG_LO = 0.9 - 0.0125;  // 0.8875
+            const DMG_LO = 0.8
             if (damage > DMG_LO) {
                 back  = fo >= 0.5 ? front : back;
                 front = img(9);
-                fo    = clamp((damage - DMG_LO) / 0.025);
+                fo    = clamp((damage - DMG_LO) / (1 - DMG_LO));
             }
 
             return { back, front, frontOpacity: fo };
@@ -1164,7 +1170,7 @@
                     p.appendChild(imgFront);
                     imgs = p.querySelectorAll('img');
                 }
-                imgs[0].src = fade.back;   imgs[0].style.opacity = '1';
+                imgs[0].src = fade.back;   imgs[0].style.opacity = 1 - fade.frontOpacity;
                 imgs[1].src = fade.front;  imgs[1].style.opacity = fade.frontOpacity;
             }
 
