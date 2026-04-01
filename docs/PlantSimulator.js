@@ -4,10 +4,10 @@ class PlantSimulator {
          * 成長ステージ別パラメータ (リーフレタス向け)
          */
         this.stageParams = [
-            { name: '発芽期', kl: 2000,  baseSpeed: 0.002, optTemp: 22, tempW: 7,  etiolSens: 0.4 },
-            { name: '幼苗期', kl: 6000,  baseSpeed: 0.005, optTemp: 20, tempW: 8,  etiolSens: 1.5 }, // 徒長リスク最大
-            { name: '生育期', kl: 15000, baseSpeed: 0.005, optTemp: 20, tempW: 10, etiolSens: 0.7 },
-            { name: '成熟期', kl: 12000, baseSpeed: 0.003, optTemp: 18, tempW: 7,  etiolSens: 0.3 }
+            { name: '発芽期', kl: 2000,  baseSpeed: 0.0007, optTemp: 22, tempW: 7,  etiolSens: 0.4 },
+            { name: '幼苗期', kl: 6000,  baseSpeed: 0.0018, optTemp: 20, tempW: 8,  etiolSens: 1.5 }, // 徒長リスク最大
+            { name: '生育期', kl: 15000, baseSpeed: 0.0018, optTemp: 20, tempW: 10, etiolSens: 0.7 },
+            { name: '成熟期', kl: 12000, baseSpeed: 0.0011, optTemp: 18, tempW: 7,  etiolSens: 0.3 }
         ];
 
         this.config = {
@@ -232,7 +232,7 @@ class PlantSimulator {
             }
         } else {
             // 夜間: 蓄積エネルギーを「成長 (Growth)」または「徒長 (Etiolation)」に分配
-            const conversionRate = 0.1 * fT; // 夜間温度が良いほど変換効率アップ
+            const conversionRate = 0.07 * fT; // 夜間温度が良いほど変換効率アップ
             // 夜間は貯蔵エネルギー＋種子エネルギーを使用可能にする
             const maxNight = this.seedParams.maxNightUse * dt;
             const desiredCost = Math.min(this.state.storageDLI + this.state.seedEnergy, maxNight);
