@@ -1,7 +1,7 @@
 class PlantSimulator {
     constructor() {
         /**
-         * 成長ステージ別パラメータ (サニーレタス向け)
+         * 成長ステージ別パラメータ (リーフレタス向け)
          */
         this.stageParams = [
             { name: '発芽期', kl: 2000,  baseSpeed: 0.002, optTemp: 22, tempW: 7,  etiolSens: 0.4 },
