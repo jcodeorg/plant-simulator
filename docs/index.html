@@ -926,6 +926,9 @@
 
         /**
          * 成長度から back/front 画像と front の不透明度を計算する（クロスフェード用）
+         * 各画像の境界±2.5%（合計5%）の範囲で連続的にブレンドする
+         * @returns {{ back: string, front: string, frontOpacity: number }}
+         */
         /**
          * 時刻（0-23時）から空の背景グラデーションを返す
          * 暗闇→夜明け→朝→昼→夕→夜 の遷移をRGB補間で表現
@@ -965,12 +968,11 @@
          * @returns {{ back: string, front: string, frontOpacity: number }}
          */
         function getPlantCrossfade(growth, etiolation, tipburn, damage) {
-            // 基本は成長に応じたベース画像 (lettuce_0..5)
-            const N    = 6;           // 画像枚数 (lettuce_0〜5)
-            const step = 100 / N;     // 1枚あたりの成長幅
-            const half = 2.5;         // クロスフェード幅 5% の半分
+            // ベース画像 (lettuce_0..5) の決定（境界±2.5%でクロスフェード）
+            const N    = 6;
+            const step = 100 / N;
+            const half = 2.5;
 
-            // ベース画像の決定（境界付近は前後でクロスフェード）
             let baseBack = null, baseFront = null, baseFrontOpacity = 1;
             for (let n = 1; n < N; n++) {
                 const b = n * step;
@@ -989,32 +991,37 @@
                 baseFrontOpacity = 1;
             }
 
-            // 特殊状態のオーバーレイ（優先度: damage > tipburn > etiolation）
-            // オーバーレイは baseBack/baseFront の上に front 画像を置き、opacity でクロスフェードする
-            // damage: lettuce_9, tipburn: lettuce_8, etiolation: lettuce_6/7
-            if (damage > 0) {
-                const op = Math.max(0, Math.min(1, damage));
-                return { back: baseBack, front: 'img/lettuce_9.png', frontOpacity: op * 1.0 };
+            // 優先度: damage > tipburn > etiolation
+            // damage は 80% 以上でフェード開始
+            if (damage >= 0.8) {
+                const op = Math.max(0, Math.min(1, (damage - 0.8) / 0.2));
+                return { back: baseBack, front: 'img/lettuce_9.png', frontOpacity: op };
             }
+
             if (tipburn > 0) {
                 const op = Math.max(0, Math.min(1, tipburn));
                 return { back: baseBack, front: 'img/lettuce_8.png', frontOpacity: op * 0.95 };
             }
 
-            // etiolation: 0..1 range. Use lettuce_6 for low etiolation, lettuce_7 for high.
+            // etiolation の表示ルール（stressCumul.etiol の45日シミュレーションスケールに合わせた閾値）
+            // - 0.05 で lettuce_6 表示開始
+            // - 0.05〜0.30: base -> lettuce_6 クロスフェード
+            // - 0.30〜0.60: lettuce_6 -> lettuce_7 クロスフェード
+            // - >=0.60: lettuce_7 を完全表示
             if (etiolation > 0) {
-                // split at 0.5: 0..0.5 -> fade base -> lettuce_6, 0.5..1 -> fade lettuce_6 -> lettuce_7
-                if (etiolation <= 0.5) {
-                    const op = Math.max(0, Math.min(1, etiolation / 0.5));
-                    return { back: baseBack, front: 'img/lettuce_6.png', frontOpacity: op * 0.9 };
-                } else {
-                    const op = Math.max(0, Math.min(1, (etiolation - 0.5) / 0.5));
-                    // Crossfade from lettuce_6 to lettuce_7 by using lettuce_6 as back and lettuce_7 as front
+                if (etiolation < 0.05) {
+                    // 微小なので何もしない
+                } else if (etiolation < 0.30) {
+                    const op = Math.max(0, Math.min(1, (etiolation - 0.05) / 0.25));
+                    return { back: baseBack, front: 'img/lettuce_6.png', frontOpacity: op * 0.95 };
+                } else if (etiolation < 0.60) {
+                    const op = Math.max(0, Math.min(1, (etiolation - 0.30) / 0.30));
                     return { back: 'img/lettuce_6.png', front: 'img/lettuce_7.png', frontOpacity: op * 0.98 };
+                } else {
+                    return { back: 'img/lettuce_7.png', front: 'img/lettuce_7.png', frontOpacity: 1 };
                 }
             }
 
-            // デフォルトは成長ベースのクロスフェード
             return { back: baseBack, front: baseFront, frontOpacity: baseFrontOpacity };
         }
 
@@ -1151,6 +1158,27 @@
         }
 
         // --- 速度・天候制御 ---
+        function startSim() {
+            // シミュレーション開始処理（startOrReset から呼ばれる）
+            simPaused = false;
+            state.simFinished = false;
+            setStatusBadge(true);
+
+            const startBtn = document.getElementById('btn-start');
+            if (startBtn) {
+                startBtn.dataset.mode = 'reset';
+                startBtn.className = 'shrink-0 bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition';
+                startBtn.textContent = '⏹ リセット';
+            }
+
+            const pauseBtn = document.getElementById('btn-pause');
+            if (pauseBtn) {
+                pauseBtn.disabled = false;
+                pauseBtn.textContent = '⏸';
+                pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-full text-base transition';
+                pauseBtn.onclick = togglePause;
+            }
+        }
         function startOrReset() {
             const startBtn = document.getElementById('btn-start');
             if (startBtn.dataset.mode === 'reset') {
@@ -1158,22 +1186,8 @@
             } else {
                 startSim();
             }
-        }
-
-        function startSim() {
-            if (state.simFinished) return;
-            // 入力欄の最新値を確実に反映してから開始
-            applyAndRegenerateWeather();
-            simPaused = false;
-            setStatusBadge(true);
-            const startBtn = document.getElementById('btn-start');
-            startBtn.dataset.mode = 'reset';
-            startBtn.className = 'shrink-0 bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-full text-xs transition';
-            startBtn.textContent = '⏹ リセット';
             const pauseBtn = document.getElementById('btn-pause');
-            pauseBtn.disabled = false;
-            pauseBtn.className = 'w-9 h-9 flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-full text-base transition';
-            pauseBtn.textContent = '⏸';
+            if (pauseBtn) pauseBtn.textContent = '⏸';
             addLog('シミュレーション開始。', 'success');
         }
 

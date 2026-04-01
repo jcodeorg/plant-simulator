@@ -270,6 +270,14 @@ class PlantSimulator {
             }
         }
 
+        // 徒長が進んでいる場合でも、わずかな成長を伴うように小さなブーストを追加する。
+        // これにより、徒長が増えても成長率が完全に止まらず少し進むようになる。
+        if (typeof etiolStep !== 'undefined' && etiolStep > 0) {
+            // etiolStep に比例した小さな成長ボーナスを適用。dt により時間刻みを尊重。
+            const etiolGrowthBoost = Math.min(0.05 * dt, etiolStep * 0.02 * dt);
+            deltaG = deltaG + etiolGrowthBoost;
+        }
+
         this.state.growth = Math.min(1.0, this.state.growth + Math.max(0, deltaG));
 
         // --- 3. チップバーン (Tipburn) ---
