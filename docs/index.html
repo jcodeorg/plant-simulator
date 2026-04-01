@@ -847,7 +847,7 @@
 
                     // PlantSimulator で1時間分更新 (dt=1.0)
                     const simStatus = lettuce.update(state.temp, state.humid, state.light, 1.0, w.hour);
-                    state.growth     = simStatus.growth * 100;
+                    state.growth     = simStatus.growth;
                     state.damage     = simStatus.damage;
                     state.waterLevel = simStatus.waterLevel;
                     state.stageName  = simStatus.stageName;
@@ -925,11 +925,6 @@
         }
 
         /**
-         * 成長度から back/front 画像と front の不透明度を計算する（クロスフェード用）
-         * 各画像の境界±2.5%（合計5%）の範囲で連続的にブレンドする
-         * @returns {{ back: string, front: string, frontOpacity: number }}
-         */
-        /**
          * 時刻（0-23時）から空の背景グラデーションを返す
          * 暗闇→夜明け→朝→昼→夕→夜 の遷移をRGB補間で表現
          */
@@ -963,66 +958,86 @@
         }
 
         /**
-         * getPlantCrossfade: 成長度から2枚の画像とフロント不透明度を返す
-         * 各画像の境界±2.5%（合計5%）の範囲で連続的にブレンドする
+         * getPlantCrossfade: 植物状態から back/front 画像と front 不透明度を返す
+         *
+         * ■ 通常成長パス: growth(0-100%) →  lettuce_0 → 1 → 2 → 3 → 4 → 5
+         *   各境界 ±1.25%（計2.5%）でクロスフェード
+         *   後半で tipburn > 0 → 現在画像から lettuce_8 へ（tipburn値でクロスフェード）
+         *
+         * ■ 徒長パス: etiolation ≥ 0.025 → lettuce_0 → 1 → 6 → 7
+         *   etiolation値の閾値(0.05/0.30/0.60)で遷移、各境界 ±0.0125（計2.5%）
+         *
+         * ■ ダメージ: 全状態から damage > 0.8875 → lettuce_9 へ（2.5%ゾーンでクロスフェード）
+         *
          * @returns {{ back: string, front: string, frontOpacity: number }}
          */
         function getPlantCrossfade(growth, etiolation, tipburn, damage) {
-            // ベース画像 (lettuce_0..5) の決定（境界±2.5%でクロスフェード）
-            const N    = 6;
-            const step = 100 / N;
-            const half = 2.5;
+            const clamp = v => Math.max(0, Math.min(1, v));
+            const img   = n => `img/lettuce_${n}.png`;
 
-            let baseBack = null, baseFront = null, baseFrontOpacity = 1;
-            for (let n = 1; n < N; n++) {
-                const b = n * step;
-                if (growth >= b - half && growth <= b + half) {
-                    const t = (growth - (b - half)) / (half * 2);
-                    baseBack = `img/lettuce_${n - 1}.png`;
-                    baseFront = `img/lettuce_${n}.png`;
-                    baseFrontOpacity = Math.max(0, Math.min(1, t));
-                    break;
+            let back, front, fo;
+
+            // === 徒長パス: lettuce_0 → 1 → 6 → 7 ===
+            if (etiolation >= 0.025) {
+                const imgs   = [0, 1, 6, 7];
+                const bounds = [0.05, 0.30, 0.60]; // 画像境界
+                const H = 0.0125; // ±1.25% = 計2.5%
+
+                // デフォルト: 最初の画像
+                back = img(imgs[0]); front = back; fo = 1;
+
+                for (let i = 0; i < bounds.length; i++) {
+                    const lo = bounds[i] - H, hi = bounds[i] + H;
+                    if (etiolation < lo) {
+                        back = img(imgs[i]); front = back; fo = 1;
+                        break;
+                    } else if (etiolation <= hi) {
+                        back  = img(imgs[i]);
+                        front = img(imgs[i + 1]);
+                        fo = clamp((etiolation - lo) / (2 * H));
+                        break;
+                    } else if (i === bounds.length - 1) {
+                        // 最終境界を超えた
+                        back = img(imgs[imgs.length - 1]); front = back; fo = 1;
+                    }
                 }
             }
-            if (!baseBack) {
-                const idx = Math.min(N - 1, Math.floor(growth / step));
-                baseBack = `img/lettuce_${idx}.png`;
-                baseFront = baseBack;
-                baseFrontOpacity = 1;
-            }
+            // === 通常成長パス: lettuce_0 → 1 → 2 → 3 → 4 → 5 ===
+            else {
+                const N = 6, step = 1.0 / N, H = 0.0125; // ±0.0125 = 計2.5%
 
-            // 優先度: damage > tipburn > etiolation
-            // damage は 80% 以上でフェード開始
-            if (damage >= 0.8) {
-                const op = Math.max(0, Math.min(1, (damage - 0.8) / 0.2));
-                return { back: baseBack, front: 'img/lettuce_9.png', frontOpacity: op };
-            }
+                back = null; front = null; fo = 1;
+                for (let n = 1; n < N; n++) {
+                    const b = n * step;
+                    if (growth >= b - H && growth <= b + H) {
+                        back  = img(n - 1);
+                        front = img(n);
+                        fo = clamp((growth - b + H) / (2 * H));
+                        break;
+                    }
+                }
+                if (!back) {
+                    const idx = Math.min(N - 1, Math.floor(growth / step));
+                    back = img(idx); front = back; fo = 1;
+                }
 
-            if (tipburn > 0) {
-                const op = Math.max(0, Math.min(1, tipburn));
-                return { back: baseBack, front: 'img/lettuce_8.png', frontOpacity: op * 0.95 };
-            }
-
-            // etiolation の表示ルール（stressCumul.etiol の45日シミュレーションスケールに合わせた閾値）
-            // - 0.05 で lettuce_6 表示開始
-            // - 0.05〜0.30: base -> lettuce_6 クロスフェード
-            // - 0.30〜0.60: lettuce_6 -> lettuce_7 クロスフェード
-            // - >=0.60: lettuce_7 を完全表示
-            if (etiolation > 0) {
-                if (etiolation < 0.05) {
-                    // 微小なので何もしない
-                } else if (etiolation < 0.30) {
-                    const op = Math.max(0, Math.min(1, (etiolation - 0.05) / 0.25));
-                    return { back: baseBack, front: 'img/lettuce_6.png', frontOpacity: op * 0.95 };
-                } else if (etiolation < 0.60) {
-                    const op = Math.max(0, Math.min(1, (etiolation - 0.30) / 0.30));
-                    return { back: 'img/lettuce_6.png', front: 'img/lettuce_7.png', frontOpacity: op * 0.98 };
-                } else {
-                    return { back: 'img/lettuce_7.png', front: 'img/lettuce_7.png', frontOpacity: 1 };
+                // チップバーン: 現在の成長画像 → lettuce_8
+                if (tipburn > 0.0125) {
+                    back  = fo >= 0.5 ? front : back;
+                    front = img(8);
+                    fo    = clamp(tipburn);
                 }
             }
 
-            return { back: baseBack, front: baseFront, frontOpacity: baseFrontOpacity };
+            // === ダメージ (全状態共通): → lettuce_9 ===
+            const DMG_LO = 0.9 - 0.0125;  // 0.8875
+            if (damage > DMG_LO) {
+                back  = fo >= 0.5 ? front : back;
+                front = img(9);
+                fo    = clamp((damage - DMG_LO) / 0.025);
+            }
+
+            return { back, front, frontOpacity: fo };
         }
 
         function render() {
@@ -1063,10 +1078,10 @@
             }
 
             // --- ステージタイムライン ---
-            const si = state.growth < 10 ? 0 : state.growth < 30 ? 1 : state.growth < 70 ? 2 : 3;
+            const si = state.growth < 0.10 ? 0 : state.growth < 0.30 ? 1 : state.growth < 0.70 ? 2 : 3;
             // カーソル位置 (0〜100%) ― 右端ぎりぎりを避けるため99%でキャップ
             const cursor = document.getElementById('stage-cursor');
-            if (cursor) cursor.style.left = `${Math.min(99, state.growth)}%`;
+            if (cursor) cursor.style.left = `${Math.min(99, state.growth * 100)}%`;
             // 現在ステージを明るく、他を暗く
             ['ss0','ss1','ss2','ss3'].forEach((id, idx) => {
                 const el = document.getElementById(id);
@@ -1076,7 +1091,7 @@
             const reqEl = document.getElementById('stage-req');
             if (reqEl) reqEl.textContent = `💡 ${STAGE_MIN_LIGHT[si]}lx | 🌡️ ${STAGE_OPT_TEMP[si]}°C`;
             const growPct = document.getElementById('sens-growth-pct');
-            if (growPct) growPct.textContent = `${state.growth.toFixed(1)}%`;
+            if (growPct) growPct.textContent = `${(state.growth * 100).toFixed(1)}%`;
             const infoDmg = document.getElementById('info-damage-pct');
             if (infoDmg) infoDmg.textContent = `${(state.damage * 100).toFixed(1)}%`;
             // 光量不足警告（昼間 100lx 以上のときのみ表示）
