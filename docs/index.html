@@ -975,57 +975,37 @@
             const clamp = v => Math.max(0, Math.min(1, v));
             const img   = n => `img/lettuce_${n}.png`;
 
+            // growth値・画像インデックス配列・境界配列・クロスフェード幅 H を受け取り
+            // { back, front, fo } を返す共通ヘルパー
+            function resolveCrossfade(imgs, bounds, H) {
+                let back = img(imgs[0]), front = back, fo = 1;
+                for (let i = 0; i < bounds.length; i++) {
+                    const lo = bounds[i] - H, hi = bounds[i] + H;
+                    if (growth < lo) {
+                        back = img(imgs[i]); front = back; fo = 1;
+                        break;
+                    } else if (growth <= hi) {
+                        back  = img(imgs[i]);
+                        front = img(imgs[i + 1]);
+                        fo = clamp((growth - lo) / (2 * H));
+                        break;
+                    } else if (i === bounds.length - 1) {
+                        // 最終境界を超えた
+                        back = img(imgs[imgs.length - 1]); front = back; fo = 1;
+                    }
+                }
+                return { back, front, fo };
+            }
+
             let back, front, fo;
 
             // === 徒長パス: lettuce_0 → 1 → 6 → 7 ===
             if (etiolation >= 0.025) {
-                const imgs   = [0, 6, 7];
-                const bounds = [0.03, 0.10]; // 画像境界
-                const H = 0.025; // ±2.5% = 計5%
-
-                // デフォルト: 最初の画像
-                back = img(imgs[0]); front = back; fo = 1;
-
-                for (let i = 0; i < bounds.length; i++) {
-                    const lo = bounds[i] - H, hi = bounds[i] + H;
-                    if (growth < lo) {
-                        back = img(imgs[i]); front = back; fo = 1;
-                        break;
-                    } else if (growth <= hi) {
-                        back  = img(imgs[i]);
-                        front = img(imgs[i + 1]);
-                        fo = clamp((growth - lo) / (2 * H));
-                        break;
-                    } else if (i === bounds.length - 1) {
-                        // 最終境界を超えた
-                        back = img(imgs[imgs.length - 1]); front = back; fo = 1;
-                    }
-                }
+                ({ back, front, fo } = resolveCrossfade([0, 6, 7], [0.03, 0.10], 0.025));
             }
             // === 通常成長パス: lettuce_0 → 1 → 2 → 3 → 4 → 5 ===
             else {
-                const imgs   = [0, 1, 2, 3, 4, 5];
-                const bounds = [0.05, 0.15, 0.35, 0.55, 0.85]; // 各境界
-                const H = 0.025; // ±0.025 = 計0.05
-
-                // デフォルト: 最初の画像
-                back = img(imgs[0]); front = back; fo = 1;
-
-                for (let i = 0; i < bounds.length; i++) {
-                    const lo = bounds[i] - H, hi = bounds[i] + H;
-                    if (growth < lo) {
-                        back = img(imgs[i]); front = back; fo = 1;
-                        break;
-                    } else if (growth <= hi) {
-                        back  = img(imgs[i]);
-                        front = img(imgs[i + 1]);
-                        fo = clamp((growth - lo) / (2 * H));
-                        break;
-                    } else if (i === bounds.length - 1) {
-                        // 最終境界を超えた
-                        back = img(imgs[imgs.length - 1]); front = back; fo = 1;
-                    }
-                }
+                ({ back, front, fo } = resolveCrossfade([0, 1, 2, 3, 4, 5], [0.05, 0.15, 0.35, 0.55, 0.85], 0.025));
 
                 // チップバーン: 現在の成長画像 → lettuce_8
                 if (tipburn > 0.125 && growth >= 0.30) {
