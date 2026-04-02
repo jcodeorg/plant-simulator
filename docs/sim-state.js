@@ -57,7 +57,7 @@ const MONTH_DEFAULTS = {
     'outdoor_7':  { month: 7,  sunrise: 5, sunset: 19, peakLux: 80000, minT: 23.0, maxT: 30.5, hum: 75 }, // 屋外・夏
     'outdoor_10': { month: 10, sunrise: 6, sunset: 17, peakLux: 35000, minT: 15.0, maxT: 22.0, hum: 70 }, // 屋外・秋
     'indoor_1':   { month: 1,  sunrise: 8, sunset: 17, peakLux: 2000,  minT: 18.0, maxT: 23.0, hum: 50 }, // 屋内・冬
-    'indoor_4':   { month: 4,  sunrise: 7, sunset: 18, peakLux: 2000,  minT: 18.0, maxT: 24.0, hum: 55 }, // 屋内・春
+    'indoor_4':   { month: 4,  sunrise: 7, sunset: 18, peakLux: 2000,  minT: 10.5, maxT: 19.5, hum: 60 }, // 屋内・春
     'indoor_7':   { month: 7,  sunrise: 6, sunset: 19, peakLux: 2000,  minT: 22.0, maxT: 27.0, hum: 60 }, // 屋内・夏 (冷房想定)
     'indoor_10':  { month: 10, sunrise: 7, sunset: 17, peakLux: 2000,  minT: 18.0, maxT: 24.0, hum: 55 }, // 屋内・秋
 };
